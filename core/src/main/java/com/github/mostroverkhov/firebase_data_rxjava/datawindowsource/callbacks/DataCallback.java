@@ -1,6 +1,6 @@
-package com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks;
+package com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.callbacks;
 
-import com.github.mostroverkhov.firebase_data_rxjava.model.HasDataWindow;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model.HasDataWindow;
 
 /**
  * Created by Maksym Ostroverkhov on 19.07.2016.

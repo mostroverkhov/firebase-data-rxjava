@@ -1,10 +1,10 @@
-package com.github.mostroverkhov.firebase_data_rxjava.lib;
+package com.github.mostroverkhov.firebase_data_rxjava.datawindowsource;
 
 /**
  * Created by Maksym Ostroverkhov on 19.07.2016.
  */
 
-import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.NotificationCallback;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.callbacks.NotificationCallback;
 
 /**
  * Controls change notifications for data window through {@link NotificationCallback}

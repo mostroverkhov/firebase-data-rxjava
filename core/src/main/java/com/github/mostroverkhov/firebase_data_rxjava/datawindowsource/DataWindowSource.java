@@ -1,14 +1,14 @@
-package com.github.mostroverkhov.firebase_data_rxjava.lib;
+package com.github.mostroverkhov.firebase_data_rxjava.datawindowsource;
 
-import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.NotificationCallback;
-import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.QueryHandle;
-import com.github.mostroverkhov.firebase_data_rxjava.model.DataQuery;
-import com.github.mostroverkhov.firebase_data_rxjava.model.DataWindowChangeEvent;
-import com.github.mostroverkhov.firebase_data_rxjava.model.DataWindowResult;
-import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.DataCallback;
-import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.NextWindowCallback;
-import com.github.mostroverkhov.firebase_data_rxjava.model.DataWindowAndNotificationResult;
-import com.github.mostroverkhov.firebase_data_rxjava.model.NotificationResult;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.callbacks.NotificationCallback;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.callbacks.QueryHandle;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model.DataQuery;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model.DataWindowChangeEvent;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model.DataWindowResult;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.callbacks.DataCallback;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.callbacks.NextWindowCallback;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model.DataWindowAndNotificationResult;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model.NotificationResult;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;

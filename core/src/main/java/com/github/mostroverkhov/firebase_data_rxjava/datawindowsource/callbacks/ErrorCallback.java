@@ -1,4 +1,4 @@
-package com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks;
+package com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.callbacks;
 
 import com.google.firebase.database.DatabaseError;
 

@@ -1,4 +1,7 @@
-package com.github.mostroverkhov.firebase_data_rxjava.model;
+package com.github.mostroverkhov.firebase_data_rxjava.rx.model;
+
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model.DataQuery;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model.DataWindowChangeEvent;
 
 import java.util.List;
 

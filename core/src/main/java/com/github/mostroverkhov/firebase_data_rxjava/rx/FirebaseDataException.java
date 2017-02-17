@@ -1,4 +1,4 @@
-package com.github.mostroverkhov.firebase_data_rxjava;
+package com.github.mostroverkhov.firebase_data_rxjava.rx;
 
 import com.google.firebase.database.DatabaseError;
 

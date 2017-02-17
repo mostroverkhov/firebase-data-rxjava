@@ -1,4 +1,4 @@
-package com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks;
+package com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.callbacks;
 
 /**
  * Created by Maksym Ostroverkhov on 19.07.2016.

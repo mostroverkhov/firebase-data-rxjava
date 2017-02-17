@@ -1,6 +1,6 @@
-package com.github.mostroverkhov.firebase_data_rxjava.model;
+package com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model;
 
-import com.github.mostroverkhov.firebase_data_rxjava.lib.DataWindowSource;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.DataWindowSource;
 
 import java.util.List;
 

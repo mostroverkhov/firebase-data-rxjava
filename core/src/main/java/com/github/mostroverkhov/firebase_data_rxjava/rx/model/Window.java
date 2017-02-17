@@ -1,6 +1,7 @@
-package com.github.mostroverkhov.firebase_data_rxjava.model;
+package com.github.mostroverkhov.firebase_data_rxjava.rx.model;
 
-import com.github.mostroverkhov.firebase_data_rxjava.FirebaseDatabaseManager;
+import com.github.mostroverkhov.firebase_data_rxjava.rx.FirebaseDatabaseManager;
+import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model.DataQuery;
 
 import java.util.List;
 
