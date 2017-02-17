@@ -3,16 +3,22 @@ package com.github.mostroverkhov.datawindowsource.model;
 /**
  * Event for data window change notifications
  */
-public class DataWindowChangeEvent<T> {
+public class WindowChangeEvent<T> {
 
     private final String prevChildName;
     private final Kind kind;
     private final T item;
 
-    public DataWindowChangeEvent(T item, Kind kind, String prevChildName) {
+    public WindowChangeEvent(T item,
+                             Kind kind,
+                             String prevChildName) {
 
-        if (item == null || kind == null || prevChildName == null) {
-            throw new IllegalArgumentException("Args should not be null");
+        if (item == null || kind == null) {
+            throw new IllegalArgumentException("Item and Kind should not be null");
+        }
+
+        if (prevChildName == null) {
+            prevChildName = "";
         }
 
         this.item = item;
@@ -20,7 +26,7 @@ public class DataWindowChangeEvent<T> {
         this.prevChildName = prevChildName;
     }
 
-    public DataWindowChangeEvent(T item, Kind kind) {
+    public WindowChangeEvent(T item, Kind kind) {
         this(item, kind, "");
     }
 

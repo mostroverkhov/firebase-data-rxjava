@@ -7,7 +7,7 @@ import com.github.mostroverkhov.datawindowsource.callbacks.NotificationCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.QueryHandle;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
 import com.github.mostroverkhov.datawindowsource.model.DataWindowAndNotificationResult;
-import com.github.mostroverkhov.datawindowsource.model.DataWindowChangeEvent;
+import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.model.WindowWithNotifications;
 import com.google.firebase.database.DatabaseError;
 
@@ -95,8 +95,8 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
             if (index >= requested || isInterrupted) {
                 return;
             }
-            final Subject<DataWindowChangeEvent, DataWindowChangeEvent> childChangeSubject
-                    = UnicastSubject.<DataWindowChangeEvent>create().toSerialized();
+            final Subject<WindowChangeEvent, WindowChangeEvent> childChangeSubject
+                    = UnicastSubject.<WindowChangeEvent>create().toSerialized();
 
             DataQuery query = state.getNext();
 
@@ -121,14 +121,14 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
         }
 
         private static class RxNotificationCallback implements NotificationCallback {
-            private final Subject<DataWindowChangeEvent, DataWindowChangeEvent> childChangeSubject;
+            private final Subject<WindowChangeEvent, WindowChangeEvent> childChangeSubject;
 
-            public RxNotificationCallback(Subject<DataWindowChangeEvent, DataWindowChangeEvent> childChangeSubject) {
+            public RxNotificationCallback(Subject<WindowChangeEvent, WindowChangeEvent> childChangeSubject) {
                 this.childChangeSubject = childChangeSubject;
             }
 
             @Override
-            public void onChildChanged(DataWindowChangeEvent event) {
+            public void onChildChanged(WindowChangeEvent event) {
                 childChangeSubject.onNext(event);
             }
 
@@ -139,7 +139,7 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
         }
 
         private class RxDataCallback implements DataCallback<T, DataWindowAndNotificationResult<T>> {
-            private final Subject<DataWindowChangeEvent, DataWindowChangeEvent> childChangeSubject;
+            private final Subject<WindowChangeEvent, WindowChangeEvent> childChangeSubject;
             private final Subscriber<? super WindowWithNotifications<T>> readResultSubscriber;
             private final State state;
             private final DataWindowSource<T> dataWindowSource;
@@ -147,8 +147,8 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
             private final long index;
             private volatile QueryHandle queryHandle;
 
-            public RxDataCallback(Subject<DataWindowChangeEvent,
-                    DataWindowChangeEvent> childChangeSubject,
+            public RxDataCallback(Subject<WindowChangeEvent,
+                    WindowChangeEvent> childChangeSubject,
                                   Subscriber<? super WindowWithNotifications<T>> readResultSubscriber,
                                   State state,
                                   DataWindowSource<T> dataWindowSource,

@@ -7,11 +7,11 @@ package com.github.mostroverkhov.datawindowsource.model;
 /**
  * Contains query for next data window, together with item count for current one
  */
-public class NotificationResult extends NextQuery {
+public class NextQueryCurrentCount extends NextQuery {
 
     private final long itemsCount;
 
-    public NotificationResult(DataQuery nextQuery, long itemsCount) {
+    public NextQueryCurrentCount(DataQuery nextQuery, long itemsCount) {
         super(nextQuery);
         this.itemsCount = itemsCount;
     }

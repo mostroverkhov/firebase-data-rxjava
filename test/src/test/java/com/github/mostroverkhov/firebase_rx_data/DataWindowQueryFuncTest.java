@@ -1,11 +1,12 @@
 package com.github.mostroverkhov.firebase_rx_data;
 
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
+import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.FirebaseDatabaseManager;
-import com.github.mostroverkhov.firebase_rx_data.common.FrdPathUtil;
-import com.github.mostroverkhov.firebase_rx_data.common.Data;
-import com.github.mostroverkhov.firebase_rx_data.common.Recorder;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.model.Window;
+import com.github.mostroverkhov.firebase_rx_data.common.Data;
+import com.github.mostroverkhov.firebase_rx_data.common.FrdPathUtil;
+import com.github.mostroverkhov.firebase_rx_data.common.Recorder;
 import com.github.mostroverkhov.firebase_rx_data.setup.DataFixture;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
@@ -16,11 +17,13 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import rx.Observable;
 import rx.Subscriber;
 import rx.schedulers.Schedulers;
 
-public class DataWindowQueryFuncTest extends AbstractTest{
+public class DataWindowQueryFuncTest extends AbstractTest {
 
     private static final int SAMPLE_ITEM_COUNT = DataFixture.ITEM_COUNT;
     private static final String[] TEST_READ_PATH = DataFixture.TEST_READ_PATH;
@@ -44,12 +47,12 @@ public class DataWindowQueryFuncTest extends AbstractTest{
                 .windowWithSize(WINDOW_SIZE)
                 .build();
 
-        final Recorder recorder = performQuery(dataQuery, Data.class);
+        final Recorder recorder = performWindowQuery(dataQuery, Data.class);
         List<Recorder.Event> events = recorder.getEvents();
         List<Recorder.Event> nexts = recorder.getNexts();
         List<Recorder.Event> errors = recorder.getErrors();
 
-        assertEvents(events, nexts, errors);
+        assertWindowEvents(events, nexts, errors);
 
         List<Data> allData = allNextEvents(nexts);
         for (int i = 0; i < allData.size(); i++) {
@@ -67,11 +70,11 @@ public class DataWindowQueryFuncTest extends AbstractTest{
                 .windowWithSize(WINDOW_SIZE)
                 .build();
 
-        final Recorder recorder = performQuery(dataQuery, Data.class);
+        final Recorder recorder = performWindowQuery(dataQuery, Data.class);
         List<Recorder.Event> events = recorder.getEvents();
         List<Recorder.Event> nexts = recorder.getNexts();
         List<Recorder.Event> errors = recorder.getErrors();
-        assertEvents(events, nexts, errors);
+        assertWindowEvents(events, nexts, errors);
 
         List<Data> allData = allNextEvents(nexts);
         for (int i = 0; i < allData.size(); i++) {
@@ -80,6 +83,25 @@ public class DataWindowQueryFuncTest extends AbstractTest{
             Assert.assertEquals("Data order should be desc", expectedId, actualData.getId());
         }
     }
+
+    @Test
+    public void dataQueryChildEventTest() throws Exception {
+
+        final DataQuery dataQuery = new DataQuery.Builder(dbRef)
+                .asc()
+                .windowWithSize(SAMPLE_ITEM_COUNT)
+                .build();
+
+        Data sentinelData = new Data(42, String.valueOf(42));
+        WindowChangeEvent<Data> sentinelEvent = new WindowChangeEvent<>(
+                sentinelData, WindowChangeEvent.Kind.ADDED);
+
+        final Recorder recorder = performChildEventsQuery(dataQuery, Data.class, sentinelEvent);
+        List<Recorder.Event> nexts = recorder.getNexts();
+        List<Recorder.Event> errors = recorder.getErrors();
+        assertChildEvents(nexts, errors);
+    }
+
 
     private List<Data> allNextEvents(List<Recorder.Event> nexts) {
         List<Data> allData = new ArrayList<>();
@@ -90,7 +112,9 @@ public class DataWindowQueryFuncTest extends AbstractTest{
         return allData;
     }
 
-    private void assertEvents(List<Recorder.Event> events, List<Recorder.Event> nexts, List<Recorder.Event> errors) {
+    private void assertWindowEvents(List<Recorder.Event> events,
+                                    List<Recorder.Event> nexts,
+                                    List<Recorder.Event> errors) {
         Assert.assertEquals("window() onCompleted should be consistent",
                 Recorder.Event.Type.COMPLETE, events.get(events.size() - 1).getType());
         Assert.assertEquals("window() onError should be consistent",
@@ -107,7 +131,45 @@ public class DataWindowQueryFuncTest extends AbstractTest{
         }
     }
 
-    private <T> Recorder performQuery(DataQuery dataQuery, Class<T> itemType)
+    private void assertChildEvents(List<Recorder.Event> nexts,
+                                   List<Recorder.Event> errors) {
+        Assert.assertEquals("window() onError should be empty",
+                0, errors.size());
+        Assert.assertEquals("window() onNext should be consistent",
+                SAMPLE_ITEM_COUNT + 1,
+                nexts.size());
+    }
+
+    private <T> Recorder performChildEventsQuery(DataQuery dataQuery,
+                                                 Class<T> itemType,
+                                                 WindowChangeEvent<T> sentinel)
+            throws InterruptedException {
+
+        final Recorder recorder = new Recorder();
+        databaseManager.data().notifications(dataQuery, itemType)
+                .timeout(8, TimeUnit.SECONDS, Observable.just(sentinel))
+                .observeOn(Schedulers.io())
+                .toBlocking()
+                .subscribe(new Subscriber<WindowChangeEvent<T>>() {
+                    @Override
+                    public void onCompleted() {
+                        recorder.recordComplete();
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        recorder.recordError(e);
+                    }
+
+                    @Override
+                    public void onNext(WindowChangeEvent<T> event) {
+                        recorder.recordNext(event);
+                    }
+                });
+        return recorder;
+    }
+
+    private <T> Recorder performWindowQuery(DataQuery dataQuery, Class<T> itemType)
             throws InterruptedException {
         final Recorder recorder = new Recorder();
 

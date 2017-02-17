@@ -6,9 +6,9 @@ import com.github.mostroverkhov.datawindowsource.callbacks.NotificationCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.QueryHandle;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
 import com.github.mostroverkhov.datawindowsource.model.DataWindowAndNotificationResult;
-import com.github.mostroverkhov.datawindowsource.model.DataWindowChangeEvent;
 import com.github.mostroverkhov.datawindowsource.model.DataWindowResult;
-import com.github.mostroverkhov.datawindowsource.model.NotificationResult;
+import com.github.mostroverkhov.datawindowsource.model.NextQueryCurrentCount;
+import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 /**
  * Created by Maksym Ostroverkhov on 09.07.2016.
@@ -40,15 +41,21 @@ public class DataWindowSource<T> {
         }
     };
     private final Object lock = new Object();
+    private final Scheduler scheduler;
+
+    public DataWindowSource(Executor callbacksExecutor) {
+        this.scheduler = new ExecutorScheduler(callbacksExecutor);
+    }
 
     public DataWindowSource() {
+        this.scheduler = new CurrentThreadScheduler();
     }
 
     /**
      * Returns data change notifications to client provided callback.
      *
-     * @param nextWindowCallback next data query callback
-     * @param notificationCallback     data window change events callback
+     * @param nextWindowCallback   next data query callback
+     * @param notificationCallback data window change events callback
      * @return handle used to unsubscribe from child change notifications
      */
     public QueryHandle next(final DataQuery dataQuery,
@@ -61,7 +68,6 @@ public class DataWindowSource<T> {
         final DataQuery.OrderDirection orderDir = dataQuery.getOrderDir();
         DataQuery.OrderBy orderBy = dataQuery.getOrderBy();
         String orderByChildKey = dataQuery.orderByChildKey();
-
         final Query dataDbRef = buildQuery(dataQuery,
                 windowSizeAndNextFirst,
                 orderDir,
@@ -75,7 +81,7 @@ public class DataWindowSource<T> {
                         ? nextAsc(dataQuery, dataSnapshot, windowSize)
                         : nextDesc(dataQuery, dataSnapshot, windowSize);
 
-                nextWindowCallback.onData(new NotificationResult(next, dataSnapshot.getChildrenCount()));
+                nextWindowCallback.onData(new NextQueryCurrentCount(next, dataSnapshot.getChildrenCount()));
             }
 
             @Override
@@ -88,12 +94,17 @@ public class DataWindowSource<T> {
         final Query childDbRef = buildQuery(dataQuery, windowSize, orderDir, orderBy, orderByChildKey);
         final ChildEventListener childListener = new ChildEventListener() {
             @Override
-            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                onEvent(dataSnapshot,
-                        s,
-                        itemType,
-                        notificationCallback,
-                        DataWindowChangeEvent.Kind.ADDED);
+            public void onChildAdded(final DataSnapshot dataSnapshot, final String s) {
+                scheduler.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        onEvent(dataSnapshot,
+                                s,
+                                itemType,
+                                notificationCallback,
+                                WindowChangeEvent.Kind.ADDED);
+                    }
+                });
             }
 
             @Override
@@ -102,7 +113,7 @@ public class DataWindowSource<T> {
                         s,
                         itemType,
                         notificationCallback,
-                        DataWindowChangeEvent.Kind.CHANGED);
+                        WindowChangeEvent.Kind.CHANGED);
             }
 
             @Override
@@ -111,7 +122,7 @@ public class DataWindowSource<T> {
                         "",
                         itemType,
                         notificationCallback,
-                        DataWindowChangeEvent.Kind.REMOVED);
+                        WindowChangeEvent.Kind.REMOVED);
             }
 
             @Override
@@ -120,7 +131,7 @@ public class DataWindowSource<T> {
                         s,
                         itemType,
                         notificationCallback,
-                        DataWindowChangeEvent.Kind.MOVED);
+                        WindowChangeEvent.Kind.MOVED);
             }
 
             @Override
@@ -142,11 +153,11 @@ public class DataWindowSource<T> {
     private void onEvent(DataSnapshot dataSnapshot,
                          String prevChildName,
                          Class<T> itemType, NotificationCallback<T> notificationCallback,
-                         DataWindowChangeEvent.Kind kind) {
+                         WindowChangeEvent.Kind kind) {
 
         T value = dataSnapshot.getValue(itemType);
         if (value != null) {
-            notificationCallback.onChildChanged(new DataWindowChangeEvent<>(
+            notificationCallback.onChildChanged(new WindowChangeEvent<>(
                     value,
                     kind,
                     prevChildName));
@@ -550,32 +561,32 @@ public class DataWindowSource<T> {
 
         @Override
         public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-            processChildEvent(dataSnapshot, itemType, DataWindowChangeEvent.Kind.ADDED);
+            processChildEvent(dataSnapshot, itemType, WindowChangeEvent.Kind.ADDED);
         }
 
         @Override
         public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-            processChildEvent(dataSnapshot, itemType, DataWindowChangeEvent.Kind.CHANGED);
+            processChildEvent(dataSnapshot, itemType, WindowChangeEvent.Kind.CHANGED);
         }
 
         @Override
         public void onChildRemoved(DataSnapshot dataSnapshot) {
-            processChildEvent(dataSnapshot, itemType, DataWindowChangeEvent.Kind.REMOVED);
+            processChildEvent(dataSnapshot, itemType, WindowChangeEvent.Kind.REMOVED);
         }
 
         @Override
         public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-            processChildEvent(dataSnapshot, itemType, DataWindowChangeEvent.Kind.MOVED);
+            processChildEvent(dataSnapshot, itemType, WindowChangeEvent.Kind.MOVED);
         }
 
         private void processChildEvent(DataSnapshot dataSnapshot,
                                        Class<T> type,
-                                       DataWindowChangeEvent.Kind kind) {
+                                       WindowChangeEvent.Kind kind) {
 
             T value = dataSnapshot.getValue(type);
 
             if (value != null) {
-                DataWindowChangeEvent<T> event = new DataWindowChangeEvent<>(
+                WindowChangeEvent<T> event = new WindowChangeEvent<>(
                         value,
                         kind);
 
@@ -600,7 +611,7 @@ public class DataWindowSource<T> {
                 for (KeyValue<T> keyValue : keyValues) {
                     cachedEvents.remove(new KeyAndKind(
                             keyValue.getKey(),
-                            DataWindowChangeEvent.Kind.ADDED));
+                            WindowChangeEvent.Kind.ADDED));
                 }
             }
         }
@@ -612,7 +623,7 @@ public class DataWindowSource<T> {
 
                     if (value != null) {
                         notificationCallback.onChildChanged(
-                                new DataWindowChangeEvent<>(
+                                new WindowChangeEvent<>(
                                         value,
                                         event.getKey().getKind()));
                     }
@@ -626,9 +637,9 @@ public class DataWindowSource<T> {
     private static class KeyAndKind {
 
         private final String key;
-        private final DataWindowChangeEvent.Kind kind;
+        private final WindowChangeEvent.Kind kind;
 
-        public KeyAndKind(String key, DataWindowChangeEvent.Kind kind) {
+        public KeyAndKind(String key, WindowChangeEvent.Kind kind) {
             this.key = key;
             this.kind = kind;
         }
@@ -637,7 +648,7 @@ public class DataWindowSource<T> {
             return key;
         }
 
-        public DataWindowChangeEvent.Kind getKind() {
+        public WindowChangeEvent.Kind getKind() {
             return kind;
         }
 
@@ -713,4 +724,31 @@ public class DataWindowSource<T> {
             return sb.toString();
         }
     }
+
+    private interface Scheduler {
+
+        void execute(Runnable action);
+    }
+
+    private static final class ExecutorScheduler implements Scheduler {
+        private final Executor executor;
+
+        public ExecutorScheduler(Executor executor) {
+            this.executor = executor;
+        }
+
+        @Override
+        public void execute(Runnable action) {
+            executor.execute(action);
+        }
+    }
+
+    private static final class CurrentThreadScheduler implements Scheduler {
+
+        @Override
+        public void execute(Runnable action) {
+            action.run();
+        }
+    }
+
 }

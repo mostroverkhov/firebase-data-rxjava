@@ -5,13 +5,13 @@ package com.github.mostroverkhov.datawindowsource.callbacks;
  */
 
 
-import com.github.mostroverkhov.datawindowsource.model.NotificationResult;
+import com.github.mostroverkhov.datawindowsource.model.NextQueryCurrentCount;
 
 /**
  * Next data window query callback
  */
 public interface NextWindowCallback extends ErrorCallback {
 
-    void onData(NotificationResult notificationResult);
+    void onData(NextQueryCurrentCount nextQueryCurrentCount);
 
 }
