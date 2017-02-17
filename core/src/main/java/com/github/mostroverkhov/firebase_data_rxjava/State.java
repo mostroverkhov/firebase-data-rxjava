@@ -1,7 +1,7 @@
-package com.github.mostroverkhov.firebase_rx_data;
+package com.github.mostroverkhov.firebase_data_rxjava;
 
-import com.github.mostroverkhov.firebase_rx_data.lib.QueryHandle;
-import com.github.mostroverkhov.firebase_rx_data.model.DataQuery;
+import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.QueryHandle;
+import com.github.mostroverkhov.firebase_data_rxjava.model.DataQuery;
 
 import java.util.HashSet;
 import java.util.Set;

@@ -1,9 +1,9 @@
-package com.github.mostroverkhov.firebase_rx_data;
+package com.github.mostroverkhov.firebase_data_rxjava;
 
-import com.github.mostroverkhov.firebase_rx_data.model.DataQuery;
-import com.github.mostroverkhov.firebase_rx_data.model.Window;
-import com.github.mostroverkhov.firebase_rx_data.model.WindowWithNotifications;
-import com.github.mostroverkhov.firebase_rx_data.model.WriteResult;
+import com.github.mostroverkhov.firebase_data_rxjava.model.DataQuery;
+import com.github.mostroverkhov.firebase_data_rxjava.model.Window;
+import com.github.mostroverkhov.firebase_data_rxjava.model.WindowWithNotifications;
+import com.github.mostroverkhov.firebase_data_rxjava.model.WriteResult;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 

@@ -1,10 +1,14 @@
-package com.github.mostroverkhov.firebase_rx_data.lib;
+package com.github.mostroverkhov.firebase_data_rxjava.lib;
 
-import com.github.mostroverkhov.firebase_rx_data.model.DataQuery;
-import com.github.mostroverkhov.firebase_rx_data.model.DataWindowAndNotificationResult;
-import com.github.mostroverkhov.firebase_rx_data.model.DataWindowChangeEvent;
-import com.github.mostroverkhov.firebase_rx_data.model.DataWindowResult;
-import com.github.mostroverkhov.firebase_rx_data.model.NotificationResult;
+import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.NotificationCallback;
+import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.QueryHandle;
+import com.github.mostroverkhov.firebase_data_rxjava.model.DataQuery;
+import com.github.mostroverkhov.firebase_data_rxjava.model.DataWindowChangeEvent;
+import com.github.mostroverkhov.firebase_data_rxjava.model.DataWindowResult;
+import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.DataCallback;
+import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.NextWindowCallback;
+import com.github.mostroverkhov.firebase_data_rxjava.model.DataWindowAndNotificationResult;
+import com.github.mostroverkhov.firebase_data_rxjava.model.NotificationResult;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -23,7 +27,7 @@ import java.util.Map;
  */
 
 /**
- * Provides data paging, notifications for changes in data window for firebase database
+ * Provides windows into data, notifications for changes in those windows
  *
  * @param <T> type of item in data window
  */
@@ -43,13 +47,13 @@ public class DataWindowSource<T> {
     /**
      * Returns data change notifications to client provided callback.
      *
-     * @param notificationDataCallback next data query callback
+     * @param nextWindowCallback next data query callback
      * @param notificationCallback     data window change events callback
      * @return handle used to unsubscribe from child change notifications
      */
     public QueryHandle next(final DataQuery dataQuery,
                             final Class<T> itemType,
-                            final NotificationDataCallback notificationDataCallback,
+                            final NextWindowCallback nextWindowCallback,
                             final NotificationCallback<T> notificationCallback) {
 
         final int windowSize = dataQuery.getWindowSize();
@@ -71,12 +75,12 @@ public class DataWindowSource<T> {
                         ? nextAsc(dataQuery, dataSnapshot, windowSize)
                         : nextDesc(dataQuery, dataSnapshot, windowSize);
 
-                notificationDataCallback.onData(new NotificationResult(next, dataSnapshot.getChildrenCount()));
+                nextWindowCallback.onData(new NotificationResult(next, dataSnapshot.getChildrenCount()));
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                notificationDataCallback.onError(databaseError);
+                nextWindowCallback.onError(databaseError);
             }
         };
         dataDbRef.addListenerForSingleValueEvent(valueEventListener);

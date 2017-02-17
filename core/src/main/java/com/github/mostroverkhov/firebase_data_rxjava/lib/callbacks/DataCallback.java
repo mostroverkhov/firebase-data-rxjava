@@ -1,13 +1,13 @@
-package com.github.mostroverkhov.firebase_rx_data.lib;
+package com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks;
 
-import com.github.mostroverkhov.firebase_rx_data.model.HasDataWindow;
+import com.github.mostroverkhov.firebase_data_rxjava.model.HasDataWindow;
 
 /**
  * Created by Maksym Ostroverkhov on 19.07.2016.
  */
 
 /**
- * Callback window data
+ * Callback for data window
  */
 public interface DataCallback<V, T extends HasDataWindow<V>> extends ErrorCallback {
 

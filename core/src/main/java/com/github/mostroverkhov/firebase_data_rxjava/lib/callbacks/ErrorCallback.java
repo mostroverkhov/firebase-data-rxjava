@@ -1,4 +1,4 @@
-package com.github.mostroverkhov.firebase_rx_data.lib;
+package com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks;
 
 import com.google.firebase.database.DatabaseError;
 
@@ -7,7 +7,7 @@ import com.google.firebase.database.DatabaseError;
  */
 
 /**
- * Firebase db access error callback
+ * database access error callback
  */
 public interface ErrorCallback {
 

@@ -1,18 +1,17 @@
 package com.github.mostroverkhov.firebase_rx_data;
 
+import com.github.mostroverkhov.firebase_data_rxjava.FirebaseDatabaseManager;
 import com.github.mostroverkhov.firebase_rx_data.common.FrdPathUtil;
-import com.github.mostroverkhov.firebase_rx_data.common.TestAuthenticator;
 import com.github.mostroverkhov.firebase_rx_data.common.Data;
 import com.github.mostroverkhov.firebase_rx_data.common.Recorder;
-import com.github.mostroverkhov.firebase_rx_data.model.DataQuery;
-import com.github.mostroverkhov.firebase_rx_data.model.Window;
+import com.github.mostroverkhov.firebase_data_rxjava.model.DataQuery;
+import com.github.mostroverkhov.firebase_data_rxjava.model.Window;
 import com.github.mostroverkhov.firebase_rx_data.setup.DataFixture;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;

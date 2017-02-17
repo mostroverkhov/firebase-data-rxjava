@@ -1,9 +1,16 @@
-package com.github.mostroverkhov.firebase_rx_data.model;
+package com.github.mostroverkhov.firebase_data_rxjava.model;
+
+import com.github.mostroverkhov.firebase_data_rxjava.FirebaseDatabaseManager;
 
 import java.util.List;
 
 /**
  * Created by Maksym Ostroverkhov on 19.07.2016.
+ */
+
+/**
+ * Window into data for given data query, represented as list of typed elements
+ * Used by {@link FirebaseDatabaseManager}
  */
 public class Window<T> {
 

@@ -1,4 +1,4 @@
-package com.github.mostroverkhov.firebase_rx_data.model;
+package com.github.mostroverkhov.firebase_data_rxjava.model;
 
 import java.util.List;
 
@@ -9,7 +9,7 @@ import rx.Observable;
  */
 
 /**
- * Data window for firebase database
+ * Data window for database, together with notifications observable for changes to this data
  *
  * @param <T> type of item for data in window
  */

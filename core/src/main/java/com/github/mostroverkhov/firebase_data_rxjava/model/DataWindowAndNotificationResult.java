@@ -1,6 +1,6 @@
-package com.github.mostroverkhov.firebase_rx_data.model;
+package com.github.mostroverkhov.firebase_data_rxjava.model;
 
-import com.github.mostroverkhov.firebase_rx_data.lib.NotificationsHandle;
+import com.github.mostroverkhov.firebase_data_rxjava.lib.NotificationsHandle;
 
 import java.util.List;
 
@@ -9,7 +9,7 @@ import java.util.List;
  */
 
 /**
- * Data window and notifications result
+ * Represents data window and notifications handle
  * */
 public class DataWindowAndNotificationResult<T> extends NextQuery implements
         HasDataWindow<T> {

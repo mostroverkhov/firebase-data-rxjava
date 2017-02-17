@@ -1,7 +1,7 @@
-package com.github.mostroverkhov.firebase_rx_data;
+package com.github.mostroverkhov.firebase_data_rxjava;
 
-import com.github.mostroverkhov.firebase_rx_data.lib.NotificationsHandle;
-import com.github.mostroverkhov.firebase_rx_data.lib.QueryHandle;
+import com.github.mostroverkhov.firebase_data_rxjava.lib.NotificationsHandle;
+import com.github.mostroverkhov.firebase_data_rxjava.lib.callbacks.QueryHandle;
 
 import java.util.WeakHashMap;
 

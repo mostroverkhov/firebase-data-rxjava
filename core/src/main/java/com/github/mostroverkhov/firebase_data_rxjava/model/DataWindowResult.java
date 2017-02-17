@@ -1,8 +1,6 @@
-package com.github.mostroverkhov.firebase_rx_data.model;
+package com.github.mostroverkhov.firebase_data_rxjava.model;
 
-import com.github.mostroverkhov.firebase_rx_data.model.HasDataWindow;
-import com.github.mostroverkhov.firebase_rx_data.model.NextQuery;
-import com.github.mostroverkhov.firebase_rx_data.model.DataQuery;
+import com.github.mostroverkhov.firebase_data_rxjava.lib.DataWindowSource;
 
 import java.util.List;
 
@@ -11,7 +9,8 @@ import java.util.List;
  */
 
 /**
- * Data window result
+ * Window into data for given data query, represented as list of typed elements
+ * Used by {@link DataWindowSource}
  */
 public class DataWindowResult<T> extends NextQuery implements HasDataWindow<T> {
 

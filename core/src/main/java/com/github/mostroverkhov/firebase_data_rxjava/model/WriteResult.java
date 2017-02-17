@@ -1,4 +1,4 @@
-package com.github.mostroverkhov.firebase_rx_data.model;
+package com.github.mostroverkhov.firebase_data_rxjava.model;
 
 import com.google.firebase.database.DatabaseReference;
 
@@ -7,7 +7,7 @@ import com.google.firebase.database.DatabaseReference;
  */
 
 /**
- * Notifications for writes into firebase database
+ * Notifications for writes into database
  */
 public class WriteResult {
 

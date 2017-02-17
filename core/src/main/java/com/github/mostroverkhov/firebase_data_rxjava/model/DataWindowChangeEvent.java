@@ -1,4 +1,4 @@
-package com.github.mostroverkhov.firebase_rx_data.model;
+package com.github.mostroverkhov.firebase_data_rxjava.model;
 
 /**
  * Event for data window change notifications

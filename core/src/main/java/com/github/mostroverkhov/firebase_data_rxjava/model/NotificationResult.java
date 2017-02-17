@@ -1,10 +1,11 @@
-package com.github.mostroverkhov.firebase_rx_data.model;
-
-import com.github.mostroverkhov.firebase_rx_data.model.NextQuery;
-import com.github.mostroverkhov.firebase_rx_data.model.DataQuery;
+package com.github.mostroverkhov.firebase_data_rxjava.model;
 
 /**
  * Created by Maksym Ostroverkhov on 19.07.2016.
+ */
+
+/**
+ * Contains query for next data window, together with item count for current one
  */
 public class NotificationResult extends NextQuery {
 

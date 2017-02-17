@@ -1,9 +1,10 @@
 package com.github.mostroverkhov.firebase_rx_data;
 
+import com.github.mostroverkhov.firebase_data_rxjava.FirebaseDatabaseManager;
 import com.github.mostroverkhov.firebase_rx_data.common.Data;
 import com.github.mostroverkhov.firebase_rx_data.common.FrdPathUtil;
 import com.github.mostroverkhov.firebase_rx_data.common.Recorder;
-import com.github.mostroverkhov.firebase_rx_data.model.WriteResult;
+import com.github.mostroverkhov.firebase_data_rxjava.model.WriteResult;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
