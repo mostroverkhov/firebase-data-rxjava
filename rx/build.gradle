@@ -3,7 +3,7 @@ sourceCompatibility=JavaVersion.VERSION_1_7
 targetCompatibility=JavaVersion.VERSION_1_7
 
 dependencies {
-    compile project(":datawindowsource")
+    compile project(":windowsource")
     // https://mvnrepository.com/artifact/io.reactivex/rxjava
     compile group: 'io.reactivex', name: 'rxjava', version: '1.2.6'
 }
