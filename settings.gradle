@@ -1,1 +1,1 @@
-include ':core', ':test'
+include ':datawindowsource', ':datarxjava', ':test'

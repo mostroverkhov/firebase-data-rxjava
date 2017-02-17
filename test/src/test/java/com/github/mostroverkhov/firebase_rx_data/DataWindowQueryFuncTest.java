@@ -1,10 +1,10 @@
 package com.github.mostroverkhov.firebase_rx_data;
 
+import com.github.mostroverkhov.datawindowsource.model.DataQuery;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.FirebaseDatabaseManager;
 import com.github.mostroverkhov.firebase_rx_data.common.FrdPathUtil;
 import com.github.mostroverkhov.firebase_rx_data.common.Data;
 import com.github.mostroverkhov.firebase_rx_data.common.Recorder;
-import com.github.mostroverkhov.firebase_data_rxjava.datawindowsource.model.DataQuery;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.model.Window;
 import com.github.mostroverkhov.firebase_rx_data.setup.DataFixture;
 import com.google.firebase.database.DatabaseReference;
