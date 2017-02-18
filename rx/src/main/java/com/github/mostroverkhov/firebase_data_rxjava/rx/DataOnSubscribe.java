@@ -18,10 +18,14 @@ import rx.observables.AsyncOnSubscribe;
  * Created by Maksym Ostroverkhov on 20.07.2016.
  */
 class DataOnSubscribe<T> extends AsyncOnSubscribe<State, Window<T>> {
+    private final DataWindowSource dataWindowSource;
     private final DataQuery dataQuery;
     private final Class<T> type;
 
-    public DataOnSubscribe(DataQuery dataQuery, Class<T> type) {
+    public DataOnSubscribe(DataWindowSource dataWindowSource,
+                           DataQuery dataQuery,
+                           Class<T> type) {
+        this.dataWindowSource = dataWindowSource;
         this.dataQuery = dataQuery;
         this.type = type;
     }
@@ -33,7 +37,7 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State, Window<T>> {
 
     @Override
     protected State next(State state, long requested, Observer<Observable<? extends Window<T>>> observer) {
-        observer.onNext(Observable.create(new DataWindowOnSubscribe<>(requested, type, state, observer))
+        observer.onNext(Observable.create(new DataWindowOnSubscribe<>(dataWindowSource, requested, type, state, observer))
                 .onBackpressureBuffer());
 
         return state;
@@ -41,16 +45,19 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State, Window<T>> {
 
     private static class DataWindowOnSubscribe<T> implements Observable.OnSubscribe<Window<T>> {
 
+        private final DataWindowSource dataWindowSource;
         private final long requested;
         private final Class<T> type;
         private final State state;
         private final Observer<Observable<? extends Window<T>>> observer;
         private volatile boolean isInterrupted;
 
-        public DataWindowOnSubscribe(long requested,
+        public DataWindowOnSubscribe(DataWindowSource dataWindowSource,
+                                     long requested,
                                      Class<T> type,
                                      State state,
                                      Observer<Observable<? extends Window<T>>> observer) {
+            this.dataWindowSource = dataWindowSource;
             this.requested = requested;
             this.type = type;
             this.state = state;
@@ -59,13 +66,12 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State, Window<T>> {
 
         @Override
         public void call(final Subscriber<? super Window<T>> subscriber) {
-            DataWindowSource<T> dataWindowSource = new DataWindowSource<>();
             nextWindow(subscriber, dataWindowSource, 0);
         }
 
 
         private void nextWindow(final Subscriber<? super Window<T>> subscriber,
-                                final DataWindowSource<T> dataWindowSource,
+                                final DataWindowSource dataWindowSource,
                                 final long index) {
 
             final DataQuery curQuery = state.getNext();

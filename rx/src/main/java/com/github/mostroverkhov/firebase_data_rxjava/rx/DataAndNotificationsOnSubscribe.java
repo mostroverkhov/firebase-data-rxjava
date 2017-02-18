@@ -7,7 +7,7 @@ import com.github.mostroverkhov.datawindowsource.callbacks.NotificationCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.QueryHandle;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
 import com.github.mostroverkhov.datawindowsource.model.DataWindowAndNotificationResult;
-import com.github.mostroverkhov.datawindowsource.model.DataWindowChangeEvent;
+import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.model.WindowWithNotifications;
 import com.google.firebase.database.DatabaseError;
 
@@ -26,13 +26,16 @@ import rx.subjects.UnicastSubject;
  */
 class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowWithNotifications<T>> {
 
+    private final DataWindowSource dataWindowSource;
     private final DataQuery dataQuery;
     private final Class<T> dataItemType;
     private final DataNotificationsWatcher watcher;
 
-    public DataAndNotificationsOnSubscribe(DataQuery dataQuery,
+    public DataAndNotificationsOnSubscribe(DataWindowSource dataWindowSource,
+                                           DataQuery dataQuery,
                                            Class<T> dataItemType,
                                            DataNotificationsWatcher watcher) {
+        this.dataWindowSource = dataWindowSource;
         this.dataQuery = dataQuery;
         this.dataItemType = dataItemType;
         this.watcher = watcher;
@@ -49,7 +52,12 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
                          final Observer<Observable<? extends WindowWithNotifications<T>>> observer) {
 
         final Observable<WindowWithNotifications<T>> readResultObservable = Observable
-                .create(new WindowWithNotificationsOnSubscribe<>(state, requested, dataItemType, observer, watcher));
+                .create(new WindowWithNotificationsOnSubscribe<>(dataWindowSource,
+                        state,
+                        requested,
+                        dataItemType,
+                        observer,
+                        watcher));
         observer.onNext(readResultObservable.onBackpressureBuffer());
 
         return state;
@@ -62,6 +70,7 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
 
     private static class WindowWithNotificationsOnSubscribe<T> implements Observable.OnSubscribe<WindowWithNotifications<T>> {
 
+        private final DataWindowSource dataWindowSource;
         private final State state;
         private final long requested;
         private final Class<T> dataItemType;
@@ -69,11 +78,13 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
         private final DataNotificationsWatcher watcher;
         private volatile boolean isInterrupted;
 
-        public WindowWithNotificationsOnSubscribe(State state,
+        public WindowWithNotificationsOnSubscribe(DataWindowSource dataWindowSource,
+                                                  State state,
                                                   long requested,
                                                   Class<T> dataItemType,
                                                   Observer<Observable<? extends WindowWithNotifications<T>>> observer,
                                                   DataNotificationsWatcher watcher) {
+            this.dataWindowSource = dataWindowSource;
             this.state = state;
             this.requested = requested;
             this.dataItemType = dataItemType;
@@ -85,18 +96,17 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
         public void call(final Subscriber<? super WindowWithNotifications<T>> subscriber) {
 
             long index = 0;
-            DataWindowSource<T> dataWindowSource = new DataWindowSource<>();
             windowByIndex(dataWindowSource, subscriber, index);
         }
 
-        private void windowByIndex(DataWindowSource<T> dataWindowSource,
+        private void windowByIndex(DataWindowSource dataWindowSource,
                                    Subscriber<? super WindowWithNotifications<T>> subscriber,
                                    long index) {
             if (index >= requested || isInterrupted) {
                 return;
             }
-            final Subject<DataWindowChangeEvent, DataWindowChangeEvent> childChangeSubject
-                    = UnicastSubject.<DataWindowChangeEvent>create().toSerialized();
+            final Subject<WindowChangeEvent, WindowChangeEvent> childChangeSubject
+                    = UnicastSubject.<WindowChangeEvent>create().toSerialized();
 
             DataQuery query = state.getNext();
 
@@ -121,14 +131,14 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
         }
 
         private static class RxNotificationCallback implements NotificationCallback {
-            private final Subject<DataWindowChangeEvent, DataWindowChangeEvent> childChangeSubject;
+            private final Subject<WindowChangeEvent, WindowChangeEvent> childChangeSubject;
 
-            public RxNotificationCallback(Subject<DataWindowChangeEvent, DataWindowChangeEvent> childChangeSubject) {
+            public RxNotificationCallback(Subject<WindowChangeEvent, WindowChangeEvent> childChangeSubject) {
                 this.childChangeSubject = childChangeSubject;
             }
 
             @Override
-            public void onChildChanged(DataWindowChangeEvent event) {
+            public void onChildChanged(WindowChangeEvent event) {
                 childChangeSubject.onNext(event);
             }
 
@@ -139,19 +149,19 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
         }
 
         private class RxDataCallback implements DataCallback<T, DataWindowAndNotificationResult<T>> {
-            private final Subject<DataWindowChangeEvent, DataWindowChangeEvent> childChangeSubject;
+            private final Subject<WindowChangeEvent, WindowChangeEvent> childChangeSubject;
             private final Subscriber<? super WindowWithNotifications<T>> readResultSubscriber;
             private final State state;
-            private final DataWindowSource<T> dataWindowSource;
+            private final DataWindowSource dataWindowSource;
             private final DataNotificationsWatcher watcher;
             private final long index;
             private volatile QueryHandle queryHandle;
 
-            public RxDataCallback(Subject<DataWindowChangeEvent,
-                    DataWindowChangeEvent> childChangeSubject,
+            public RxDataCallback(Subject<WindowChangeEvent,
+                    WindowChangeEvent> childChangeSubject,
                                   Subscriber<? super WindowWithNotifications<T>> readResultSubscriber,
                                   State state,
-                                  DataWindowSource<T> dataWindowSource,
+                                  DataWindowSource dataWindowSource,
                                   DataNotificationsWatcher watcher,
                                   long index) {
 

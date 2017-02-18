@@ -2,7 +2,7 @@ package com.github.mostroverkhov.firebase_data_rxjava.rx.model;
 
 
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
-import com.github.mostroverkhov.datawindowsource.model.DataWindowChangeEvent;
+import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
 
 import java.util.List;
 
@@ -20,11 +20,11 @@ import rx.Observable;
 public class WindowWithNotifications<T> {
 
     private final List<T> window;
-    private final Observable<DataWindowChangeEvent> windowNotifications;
+    private final Observable<WindowChangeEvent> windowNotifications;
     private final DataQuery dataQuery;
 
     public WindowWithNotifications(List<T> window,
-                                   Observable<DataWindowChangeEvent> windowNotifications,
+                                   Observable<WindowChangeEvent> windowNotifications,
                                    DataQuery dataQuery) {
         if (window == null || windowNotifications == null || dataQuery == null) {
             throw new IllegalArgumentException("Args should not be null");
@@ -44,7 +44,7 @@ public class WindowWithNotifications<T> {
     /**
      * @return data change notifications {@link Observable} for data window
      */
-    public Observable<DataWindowChangeEvent> dataWindowNotifications() {
+    public Observable<WindowChangeEvent> dataWindowNotifications() {
         return windowNotifications;
     }
 
