@@ -21,18 +21,15 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
 
 /**
  * Created by Maksym Ostroverkhov on 09.07.2016.
  */
 
 /**
- * Provides windows into data, notifications for changes in those windows
- *
- * @param <T> type of item in data window
+ * Provides windows into data, and notifications for changes in those windows
  */
-public class DataWindowSource<T> {
+public class DataWindowSource {
 
     private static final QueryHandle NOOP_DATA_HANDLE = new QueryHandle() {
         @Override
@@ -43,12 +40,15 @@ public class DataWindowSource<T> {
     private final Object lock = new Object();
     private final Scheduler scheduler;
 
-    public DataWindowSource(Executor callbacksExecutor) {
-        this.scheduler = new ExecutorScheduler(callbacksExecutor);
+    /**
+     * @param scheduler defines context where data and notifications callbacks will be called
+     */
+    public DataWindowSource(Scheduler scheduler) {
+        this.scheduler = scheduler;
     }
 
     public DataWindowSource() {
-        this.scheduler = new CurrentThreadScheduler();
+        this.scheduler = CurrentThreadScheduler.getInstance();
     }
 
     /**
@@ -58,10 +58,10 @@ public class DataWindowSource<T> {
      * @param notificationCallback data window change events callback
      * @return handle used to unsubscribe from child change notifications
      */
-    public QueryHandle next(final DataQuery dataQuery,
-                            final Class<T> itemType,
-                            final NextWindowCallback nextWindowCallback,
-                            final NotificationCallback<T> notificationCallback) {
+    public <T> QueryHandle next(final DataQuery dataQuery,
+                                final Class<T> itemType,
+                                final NextWindowCallback nextWindowCallback,
+                                final NotificationCallback<T> notificationCallback) {
 
         final int windowSize = dataQuery.getWindowSize();
         int windowSizeAndNextFirst = windowSize + 1;
@@ -80,36 +80,31 @@ public class DataWindowSource<T> {
                 DataQuery next = orderDir == DataQuery.OrderDirection.ASC
                         ? nextAsc(dataQuery, dataSnapshot, windowSize)
                         : nextDesc(dataQuery, dataSnapshot, windowSize);
-
-                nextWindowCallback.onData(new NextQueryCurrentCount(next, dataSnapshot.getChildrenCount()));
+                dispatchNextWindowData(dataSnapshot.getChildrenCount(), next, nextWindowCallback);
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                nextWindowCallback.onError(databaseError);
+                dispatchNextWindowError(databaseError, nextWindowCallback);
             }
         };
+
         dataDbRef.addListenerForSingleValueEvent(valueEventListener);
 
         final Query childDbRef = buildQuery(dataQuery, windowSize, orderDir, orderBy, orderByChildKey);
         final ChildEventListener childListener = new ChildEventListener() {
             @Override
             public void onChildAdded(final DataSnapshot dataSnapshot, final String s) {
-                scheduler.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        onEvent(dataSnapshot,
-                                s,
-                                itemType,
-                                notificationCallback,
-                                WindowChangeEvent.Kind.ADDED);
-                    }
-                });
+                dispatchChildEvent(dataSnapshot,
+                        s,
+                        itemType,
+                        notificationCallback,
+                        WindowChangeEvent.Kind.ADDED);
             }
 
             @Override
             public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-                onEvent(dataSnapshot,
+                dispatchChildEvent(dataSnapshot,
                         s,
                         itemType,
                         notificationCallback,
@@ -118,7 +113,7 @@ public class DataWindowSource<T> {
 
             @Override
             public void onChildRemoved(DataSnapshot dataSnapshot) {
-                onEvent(dataSnapshot,
+                dispatchChildEvent(dataSnapshot,
                         "",
                         itemType,
                         notificationCallback,
@@ -127,7 +122,7 @@ public class DataWindowSource<T> {
 
             @Override
             public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-                onEvent(dataSnapshot,
+                dispatchChildEvent(dataSnapshot,
                         s,
                         itemType,
                         notificationCallback,
@@ -136,7 +131,7 @@ public class DataWindowSource<T> {
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                notificationCallback.onError(databaseError);
+                dispatchNotificationError(databaseError, notificationCallback);
             }
         };
         childDbRef.addChildEventListener(childListener);
@@ -150,30 +145,16 @@ public class DataWindowSource<T> {
         };
     }
 
-    private void onEvent(DataSnapshot dataSnapshot,
-                         String prevChildName,
-                         Class<T> itemType, NotificationCallback<T> notificationCallback,
-                         WindowChangeEvent.Kind kind) {
-
-        T value = dataSnapshot.getValue(itemType);
-        if (value != null) {
-            notificationCallback.onChildChanged(new WindowChangeEvent<>(
-                    value,
-                    kind,
-                    prevChildName));
-        }
-    }
-
     /**
      * @return data w/o change notifications to client provided callback
      */
-    public QueryHandle next(final DataQuery dataQuery,
-                            final Class<T> dataItemType,
-                            final DataCallback<T, DataWindowResult<T>> dataCallback) {
+    public <T> QueryHandle next(final DataQuery dataQuery,
+                                final Class<T> dataItemType,
+                                final DataCallback<T, DataWindowResult<T>> dataCallback) {
 
 
         if (dataQuery.isLast()) {
-            dataCallback.onData(new DataWindowResult<>(Collections.<T>emptyList(), dataQuery));
+            dispatchData(new DataWindowResult<>(Collections.<T>emptyList(), dataQuery), dataCallback);
             return NOOP_DATA_HANDLE;
         }
         final int windowSize = dataQuery.getWindowSize();
@@ -195,12 +176,12 @@ public class DataWindowSource<T> {
 
                 List<T> data = toItemsList(pair.getLeft());
                 DataQuery nextQuery = pair.getRight();
-                dataCallback.onData(new DataWindowResult<>(data, nextQuery));
+                dispatchData(new DataWindowResult<>(data, nextQuery), dataCallback);
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                dataCallback.onError(databaseError);
+                dispatchDataError(databaseError, dataCallback);
             }
         };
         dataDbRef.addListenerForSingleValueEvent(valueListener);
@@ -223,15 +204,17 @@ public class DataWindowSource<T> {
      * @param notificationCallback callback for data window notifications
      * @return token to cancel data query in progress
      */
-    public QueryHandle next(final DataQuery dataQuery,
-                            final Class<T> dataItemType,
-                            final DataCallback<T, DataWindowAndNotificationResult<T>> dataCallback,
-                            NotificationCallback<T> notificationCallback) {
+    public <T> QueryHandle next(final DataQuery dataQuery,
+                                final Class<T> dataItemType,
+                                final DataCallback<T, DataWindowAndNotificationResult<T>> dataCallback,
+                                NotificationCallback<T> notificationCallback) {
 
         final NextSignals nextSignals = new NextSignals();
 
         if (dataQuery.isLast()) {
-            dataCallback.onData(new DataWindowAndNotificationResult<>(Collections.<T>emptyList(), dataQuery));
+            DataWindowAndNotificationResult<T> empty =
+                    new DataWindowAndNotificationResult<>(Collections.<T>emptyList(), dataQuery);
+            dispatchDataAndNotif(dataCallback, empty);
             return NOOP_DATA_HANDLE;
         }
         final int windowSize = dataQuery.getWindowSize();
@@ -248,7 +231,9 @@ public class DataWindowSource<T> {
         * Field is used to cancel notifications while data query is in progress, but once data is queried,
         * unsubscription from child change events should be performed by NotificationHandle*/
         final DelegatingChildEventListener<T> delegatingListener = new DelegatingChildEventListener<>(
-                notificationCallback, dataItemType);
+                scheduler,
+                notificationCallback,
+                dataItemType);
         /*used to listen for child data notifications*/
         final ValueEventListener valueEventListener = new ValueEventListener() {
             @Override
@@ -283,7 +268,7 @@ public class DataWindowSource<T> {
                 /*deliver if was not cancelled while processing onDataChange*/
                 synchronized (lock) {
                     if (!nextSignals.isCancelled()) {
-                        dataCallback.onData(result);
+                        dispatchDataAndNotif(dataCallback, result);
                     }
                     /*clean up query state*/
                     nextSignals.setDataQueryInProgress(false);
@@ -294,7 +279,7 @@ public class DataWindowSource<T> {
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                dataCallback.onError(databaseError);
+                dispatchDataAndNotifError(databaseError, dataCallback);
             }
         };
 
@@ -319,6 +304,97 @@ public class DataWindowSource<T> {
                 }
             }
         };
+    }
+
+    private <T> void dispatchDataAndNotifError(final DatabaseError databaseError,
+                                               final DataCallback<T, DataWindowAndNotificationResult<T>> dataCallback) {
+        scheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                dataCallback.onError(databaseError);
+            }
+        });
+    }
+
+    private <T> void dispatchDataAndNotif(final DataCallback<T, DataWindowAndNotificationResult<T>> dataCallback,
+                                          final DataWindowAndNotificationResult<T> dataAndNotification) {
+        scheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                dataCallback.onData(dataAndNotification);
+            }
+        });
+    }
+
+    private <T> void dispatchDataError(final DatabaseError databaseError,
+                                       final DataCallback<T, DataWindowResult<T>> dataCallback) {
+        scheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                dataCallback.onError(databaseError);
+            }
+        });
+    }
+
+
+    private void dispatchNextWindowError(final DatabaseError databaseError,
+                                         final NextWindowCallback nextWindowCallback) {
+        scheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                nextWindowCallback.onError(databaseError);
+            }
+        });
+    }
+
+    private void dispatchNextWindowData(final long childrenCount,
+                                        final DataQuery next,
+                                        final NextWindowCallback nextWindowCallback) {
+        scheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                nextWindowCallback.onData(new NextQueryCurrentCount(next, childrenCount));
+            }
+        });
+    }
+
+    private <T> void dispatchNotificationError(final DatabaseError databaseError,
+                                               final NotificationCallback<T> notificationCallback) {
+        scheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                notificationCallback.onError(databaseError);
+            }
+        });
+    }
+
+    private <T> void dispatchData(final DataWindowResult<T> res, final DataCallback<T, DataWindowResult<T>> callback) {
+        scheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                callback.onData(res);
+            }
+        });
+    }
+
+    private <T> void dispatchChildEvent(final DataSnapshot dataSnapshot,
+                                        final String prevChildName,
+                                        final Class<T> itemType, final NotificationCallback<T> notificationCallback,
+                                        final WindowChangeEvent.Kind kind) {
+
+        scheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                T value = dataSnapshot.getValue(itemType);
+                if (value != null) {
+                    notificationCallback.onChildChanged(new WindowChangeEvent<>(
+                            value,
+                            kind,
+                            prevChildName));
+                }
+            }
+        });
+
     }
 
     private static <T> List<T> toItemsList(List<KeyValue<T>> items) {
@@ -419,10 +495,10 @@ public class DataWindowSource<T> {
 
     }
 
-    private Pair<List<KeyValue<T>>, DataQuery> onDataChangeAsc(DataQuery dataQuery,
-                                                               DataSnapshot dataSnapshot,
-                                                               Class<T> clazz,
-                                                               int windowSize) {
+    private <T> Pair<List<KeyValue<T>>, DataQuery> onDataChangeAsc(DataQuery dataQuery,
+                                                                   DataSnapshot dataSnapshot,
+                                                                   Class<T> clazz,
+                                                                   int windowSize) {
         int index = 0;
         String nextWindowStart = null;
 
@@ -454,10 +530,10 @@ public class DataWindowSource<T> {
         return new Pair<>(res, next);
     }
 
-    private Pair<List<KeyValue<T>>, DataQuery> onDataChangeDesc(DataQuery dataQuery,
-                                                                DataSnapshot dataSnapshot,
-                                                                Class<T> clazz,
-                                                                int windowSize) {
+    private <T> Pair<List<KeyValue<T>>, DataQuery> onDataChangeDesc(DataQuery dataQuery,
+                                                                    DataSnapshot dataSnapshot,
+                                                                    Class<T> clazz,
+                                                                    int windowSize) {
         List<KeyValue<T>> res = new ArrayList<>();
         String nextStartAt = null;
 
@@ -548,13 +624,16 @@ public class DataWindowSource<T> {
     private static class DelegatingChildEventListener<T> implements ChildEventListener {
 
         private final LinkedHashMap<KeyAndKind, DataSnapshot> cachedEvents = new LinkedHashMap<>();
+        private final Scheduler scheduler;
         private final NotificationCallback<T> notificationCallback;
         private final Class<T> itemType;
         private volatile boolean dispatchToCallback = false;
         private final Object lock = new Object();
 
-        public DelegatingChildEventListener(NotificationCallback<T> notificationCallback,
+        public DelegatingChildEventListener(Scheduler scheduler,
+                                            NotificationCallback<T> notificationCallback,
                                             Class<T> itemType) {
+            this.scheduler = scheduler;
             this.notificationCallback = notificationCallback;
             this.itemType = itemType;
         }
@@ -592,7 +671,7 @@ public class DataWindowSource<T> {
 
                 synchronized (lock) {
                     if (dispatchToCallback) {
-                        notificationCallback.onChildChanged(event);
+                        dispatchDataNotificationEvent(event);
                     } else {
                         cachedEvents.put(new KeyAndKind(dataSnapshot.getKey(), kind),
                                 dataSnapshot);
@@ -603,8 +682,9 @@ public class DataWindowSource<T> {
 
         @Override
         public void onCancelled(DatabaseError databaseError) {
-            notificationCallback.onError(databaseError);
+            dispatchDataNotificationError(databaseError);
         }
+
 
         public void removeEvents(List<KeyValue<T>> keyValues) {
             synchronized (lock) {
@@ -622,15 +702,32 @@ public class DataWindowSource<T> {
                     T value = event.getValue().getValue(itemType);
 
                     if (value != null) {
-                        notificationCallback.onChildChanged(
-                                new WindowChangeEvent<>(
-                                        value,
-                                        event.getKey().getKind()));
+                        dispatchDataNotificationEvent(new WindowChangeEvent<>(
+                                value,
+                                event.getKey().getKind()));
                     }
                 }
                 cachedEvents.clear();
             }
             dispatchToCallback = true;
+        }
+
+        private void dispatchDataNotificationEvent(final WindowChangeEvent<T> event) {
+            scheduler.execute(new Runnable() {
+                @Override
+                public void run() {
+                    notificationCallback.onChildChanged(event);
+                }
+            });
+        }
+
+        private void dispatchDataNotificationError(final DatabaseError databaseError) {
+            scheduler.execute(new Runnable() {
+                @Override
+                public void run() {
+                    notificationCallback.onError(databaseError);
+                }
+            });
         }
     }
 
@@ -722,32 +819,6 @@ public class DataWindowSource<T> {
             sb.append(", right=").append(right);
             sb.append('}');
             return sb.toString();
-        }
-    }
-
-    private interface Scheduler {
-
-        void execute(Runnable action);
-    }
-
-    private static final class ExecutorScheduler implements Scheduler {
-        private final Executor executor;
-
-        public ExecutorScheduler(Executor executor) {
-            this.executor = executor;
-        }
-
-        @Override
-        public void execute(Runnable action) {
-            executor.execute(action);
-        }
-    }
-
-    private static final class CurrentThreadScheduler implements Scheduler {
-
-        @Override
-        public void execute(Runnable action) {
-            action.run();
         }
     }
 

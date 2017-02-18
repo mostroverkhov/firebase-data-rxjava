@@ -1,6 +1,8 @@
 package com.github.mostroverkhov.firebase_data_rxjava.rx;
 
+import com.github.mostroverkhov.datawindowsource.CurrentThreadScheduler;
 import com.github.mostroverkhov.datawindowsource.DataWindowSource;
+import com.github.mostroverkhov.datawindowsource.Scheduler;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
 import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.model.Window;
@@ -27,42 +29,49 @@ import rx.Subscriber;
 public class FirebaseDatabaseManager {
 
     private final DatabaseReference root;
-    private final Executor notificationsExecutor;
-    private final DataNotificationsWatcher watcher = new DataNotificationsWatcher();
+    private final DataNotificationsWatcher watcher;
+    private DataWindowSource dataWindowSource;
 
-    public FirebaseDatabaseManager(DatabaseReference root, Executor notificationsExecutor) {
+    /**
+     * @param root      firebase root path
+     * @param scheduler determines context for firebase events delivery
+     */
+    public FirebaseDatabaseManager(DatabaseReference root, Scheduler scheduler) {
         this.root = root;
-        this.notificationsExecutor = notificationsExecutor;
+        this.dataWindowSource = new DataWindowSource(scheduler);
+        this.watcher = new DataNotificationsWatcher();
     }
 
     public FirebaseDatabaseManager(DatabaseReference root) {
-        this(root, Executors.newFixedThreadPool(4));
+        this(root, CurrentThreadScheduler.getInstance());
     }
 
     /**
-     * @param dbRefFunc function to transform root reference
+     * @param dbRefFunc allows to change root reference
      * @return entry point for firebase database rx capabilities
      */
     public Data data(DbRefFunc dbRefFunc) {
-        return new Data(dbRefFunc.map(root), watcher, notificationsExecutor);
+        return new Data(dataWindowSource, dbRefFunc.map(root), watcher);
     }
 
     /**
      * @return entry point for firebase database
      */
     public Data data() {
-        return new Data(root, watcher, notificationsExecutor);
+        return new Data(dataWindowSource, root, watcher);
     }
 
     public static class Data {
         private final DatabaseReference dbRef;
         private final DataNotificationsWatcher watcher;
-        private final Executor notifExecutor;
+        private final DataWindowSource dataWindowSource;
 
-        Data(DatabaseReference dbRef, DataNotificationsWatcher watcher, Executor notifExecutor) {
+        Data(DataWindowSource dataWindowSource,
+             DatabaseReference dbRef,
+             DataNotificationsWatcher watcher) {
             this.dbRef = dbRef;
             this.watcher = watcher;
-            this.notifExecutor = notifExecutor;
+            this.dataWindowSource = dataWindowSource;
         }
 
         /**
@@ -75,7 +84,7 @@ public class FirebaseDatabaseManager {
         public <T> Observable<WindowChangeEvent<T>> notifications(DataQuery dataQuery,
                                                                   Class<T> itemType) {
             return Observable
-                    .create(new DataNotificationsOnSubscribe<T>(dataQuery, itemType, new DataWindowSource<T>(notifExecutor)))
+                    .create(new NotificationsOnSubscribe<T>(dataQuery, itemType, dataWindowSource))
                     .onBackpressureBuffer();
         }
 
@@ -101,7 +110,7 @@ public class FirebaseDatabaseManager {
          */
         public <T> Observable<WindowWithNotifications<T>> windowWithNotifications(DataQuery dataQuery,
                                                                                   Class<T> itemType) {
-            return Observable.create(new DataAndNotificationsOnSubscribe<>(dataQuery, itemType, watcher));
+            return Observable.create(new DataAndNotificationsOnSubscribe<>(dataWindowSource, dataQuery, itemType, watcher));
         }
 
         /**
@@ -113,7 +122,7 @@ public class FirebaseDatabaseManager {
          * changes to this window data
          */
         public Observable<WindowWithNotifications<Object>> windowWithNotifications(DataQuery dataQuery) {
-            return Observable.create(new DataAndNotificationsOnSubscribe<>(dataQuery, Object.class, watcher));
+            return Observable.create(new DataAndNotificationsOnSubscribe<>(dataWindowSource, dataQuery, Object.class, watcher));
         }
 
         /**
@@ -125,7 +134,7 @@ public class FirebaseDatabaseManager {
          */
 
         public <T> Observable<Window<T>> window(final DataQuery dataQuery, Class<T> type) {
-            return Observable.create(new DataOnSubscribe<>(dataQuery, type));
+            return Observable.create(new DataOnSubscribe<>(dataWindowSource, dataQuery, type));
         }
 
         /**

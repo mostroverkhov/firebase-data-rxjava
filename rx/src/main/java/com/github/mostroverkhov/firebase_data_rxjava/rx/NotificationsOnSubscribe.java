@@ -17,17 +17,17 @@ import rx.subscriptions.Subscriptions;
  * Created with IntelliJ IDEA.
  * Author: mostroverkhov
  */
-class DataNotificationsOnSubscribe<T> implements Observable.OnSubscribe<WindowChangeEvent<T>> {
+class NotificationsOnSubscribe<T> implements Observable.OnSubscribe<WindowChangeEvent<T>> {
 
     private static final NextWindowCallback NOOP_NEXT_QUERY_CALLBACK = new NoopNextQueryCallback();
 
     private DataQuery dataQuery;
     private Class<T> itemType;
-    private final DataWindowSource<T> dataWindowSource;
+    private final DataWindowSource dataWindowSource;
 
-    public DataNotificationsOnSubscribe(DataQuery dataQuery,
-                                        Class<T> itemType,
-                                        DataWindowSource<T> dataWindowSource) {
+    public NotificationsOnSubscribe(DataQuery dataQuery,
+                                    Class<T> itemType,
+                                    DataWindowSource dataWindowSource) {
         this.dataQuery = dataQuery;
         this.itemType = itemType;
         this.dataWindowSource = dataWindowSource;

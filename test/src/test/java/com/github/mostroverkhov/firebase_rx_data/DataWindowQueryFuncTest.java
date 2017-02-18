@@ -1,5 +1,6 @@
 package com.github.mostroverkhov.firebase_rx_data;
 
+import com.github.mostroverkhov.datawindowsource.ExecutorScheduler;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
 import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.FirebaseDatabaseManager;
@@ -17,6 +18,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
@@ -36,7 +38,8 @@ public class DataWindowQueryFuncTest extends AbstractTest {
     public void setUp() throws Exception {
         FrdPathUtil pathUtil = new FrdPathUtil(FirebaseDatabase.getInstance());
         dbRef = pathUtil.path(TEST_READ_PATH);
-        databaseManager = new FirebaseDatabaseManager(dbRef);
+        databaseManager = new FirebaseDatabaseManager(dbRef,
+                new ExecutorScheduler(Executors.newSingleThreadExecutor()));
     }
 
     @Test(timeout = 10_000)
