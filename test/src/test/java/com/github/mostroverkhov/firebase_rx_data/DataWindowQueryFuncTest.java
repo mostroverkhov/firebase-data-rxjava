@@ -13,20 +13,18 @@ import com.github.mostroverkhov.firebase_rx_data.common.Recorder;
 import com.github.mostroverkhov.firebase_rx_data.setup.DataFixture;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import rx.Observable;
+import rx.Subscriber;
+import rx.schedulers.Schedulers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import rx.Observable;
-import rx.Subscriber;
-import rx.observables.ConnectableObservable;
-import rx.schedulers.Schedulers;
 
 public class DataWindowQueryFuncTest extends AbstractTest {
 
@@ -148,17 +146,12 @@ public class DataWindowQueryFuncTest extends AbstractTest {
                 SAMPLE_ITEM_COUNT + sentinelCount + nextDataWindowCount,
                 nexts.size());
 
-        List<NextQuery> nextQueries = new ArrayList<>();
-
-        NextQuery nextQuery = null;
-        for (Recorder.Event next : nexts) {
-            Object data = next.getData();
-            if (data instanceof NextQuery) {
-                nextQuery = (NextQuery) data;
-                break;
-            }
-        }
-        Assert.assertFalse(nextQuery == null);
+        Optional<NextQuery> nextQuery = nexts.stream()
+                .map(Recorder.Event::getData)
+                .filter(data -> data instanceof NextQuery)
+                .map(data -> ((NextQuery) data))
+                .findFirst();
+        Assert.assertTrue(nextQuery.isPresent());
     }
 
     private <T> Recorder performChildEventsQuery(DataQuery dataQuery,
