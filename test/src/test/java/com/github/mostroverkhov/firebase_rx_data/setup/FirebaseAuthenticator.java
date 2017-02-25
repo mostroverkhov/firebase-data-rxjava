@@ -27,22 +27,24 @@ public class FirebaseAuthenticator {
     }
 
     public void authenticate() {
-            if (FirebaseApp.getApps().isEmpty()) {
+        if (FirebaseApp.getApps().isEmpty()) {
 
-                InputStream stream = getClass().getClassLoader()
-                        .getResourceAsStream(serviceAccountFileName);
-                if (stream != null) {
-                    // Initialize the app with a custom auth variable, limiting the server's access
-                    Map<String, Object> auth = new HashMap<>();
-                    auth.put("uid", uid);
-                    FirebaseOptions options = new FirebaseOptions.Builder()
-                            .setServiceAccount(stream)
-                            .setDatabaseUrl(databaseUrl)
-                            .setDatabaseAuthVariableOverride(auth)
-                            .build();
+            InputStream stream = getClass().getClassLoader()
+                    .getResourceAsStream(serviceAccountFileName);
+            if (stream != null) {
+                // Initialize the app with a custom auth variable, limiting the server's access
+                Map<String, Object> auth = new HashMap<>();
+                auth.put("uid", uid);
+                FirebaseOptions options = new FirebaseOptions.Builder()
+                        .setServiceAccount(stream)
+                        .setDatabaseUrl(databaseUrl)
+                        .setDatabaseAuthVariableOverride(auth)
+                        .build();
 
-                    FirebaseApp.initializeApp(options);
-
+                FirebaseApp.initializeApp(options);
+            } else {
+                throw new IllegalStateException("Error while reading service account file: "
+                        + serviceAccountFileName);
             }
         }
     }
