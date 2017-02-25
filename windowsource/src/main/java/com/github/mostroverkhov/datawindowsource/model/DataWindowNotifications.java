@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Represents data window and notifications handle
  * */
-public class DataWindowAndNotificationResult<T> extends NextQuery implements
+public class DataWindowNotifications<T> extends NextQuery implements
         HasDataWindow<T> {
 
     public static final NotificationsHandle NOOP_CHILD_EVENTS_HANDLE = new NotificationsHandle() {
@@ -29,16 +29,16 @@ public class DataWindowAndNotificationResult<T> extends NextQuery implements
     private final List<T> data;
     private final NotificationsHandle notificationsHandle;
 
-    public DataWindowAndNotificationResult(List<T> data,
-                                    DataQuery next,
-                                    NotificationsHandle notificationsHandle) {
+    public DataWindowNotifications(List<T> data,
+                                   DataQuery next,
+                                   NotificationsHandle notificationsHandle) {
         super(next);
         this.data = data;
         this.notificationsHandle = notificationsHandle;
     }
 
-    public DataWindowAndNotificationResult(List<T> data,
-                                           DataQuery next) {
+    public DataWindowNotifications(List<T> data,
+                                   DataQuery next) {
         this(data, next, NOOP_CHILD_EVENTS_HANDLE);
     }
 

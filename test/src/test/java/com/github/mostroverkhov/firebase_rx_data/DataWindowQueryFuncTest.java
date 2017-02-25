@@ -1,7 +1,9 @@
 package com.github.mostroverkhov.firebase_rx_data;
 
 import com.github.mostroverkhov.datawindowsource.ExecutorScheduler;
+import com.github.mostroverkhov.datawindowsource.model.DataItem;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
+import com.github.mostroverkhov.datawindowsource.model.NextQuery;
 import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.FirebaseDatabaseManager;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.model.Window;
@@ -11,19 +13,18 @@ import com.github.mostroverkhov.firebase_rx_data.common.Recorder;
 import com.github.mostroverkhov.firebase_rx_data.setup.DataFixture;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
 import rx.Observable;
 import rx.Subscriber;
 import rx.schedulers.Schedulers;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class DataWindowQueryFuncTest extends AbstractTest {
 
@@ -138,9 +139,19 @@ public class DataWindowQueryFuncTest extends AbstractTest {
                                    List<Recorder.Event> errors) {
         Assert.assertEquals("window() onError should be empty",
                 0, errors.size());
+        int sentinelCount = 1;
+        int nextDataWindowCount = 1;
+
         Assert.assertEquals("window() onNext should be consistent",
-                SAMPLE_ITEM_COUNT + 1,
+                SAMPLE_ITEM_COUNT + sentinelCount + nextDataWindowCount,
                 nexts.size());
+
+        Optional<NextQuery> nextQuery = nexts.stream()
+                .map(Recorder.Event::getData)
+                .filter(data -> data instanceof NextQuery)
+                .map(data -> ((NextQuery) data))
+                .findFirst();
+        Assert.assertTrue(nextQuery.isPresent());
     }
 
     private <T> Recorder performChildEventsQuery(DataQuery dataQuery,
@@ -149,11 +160,14 @@ public class DataWindowQueryFuncTest extends AbstractTest {
             throws InterruptedException {
 
         final Recorder recorder = new Recorder();
-        databaseManager.data().notifications(dataQuery, itemType)
+        Observable<DataItem> notificationsStream = databaseManager.data()
+                .notifications(dataQuery, itemType)
                 .timeout(8, TimeUnit.SECONDS, Observable.just(sentinel))
-                .observeOn(Schedulers.io())
+                .observeOn(Schedulers.io());
+
+        notificationsStream
                 .toBlocking()
-                .subscribe(new Subscriber<WindowChangeEvent<T>>() {
+                .subscribe(new Subscriber<DataItem>() {
                     @Override
                     public void onCompleted() {
                         recorder.recordComplete();
@@ -165,10 +179,11 @@ public class DataWindowQueryFuncTest extends AbstractTest {
                     }
 
                     @Override
-                    public void onNext(WindowChangeEvent<T> event) {
-                        recorder.recordNext(event);
+                    public void onNext(DataItem dataItem) {
+                        recorder.recordNext(dataItem);
                     }
                 });
+
         return recorder;
     }
 
