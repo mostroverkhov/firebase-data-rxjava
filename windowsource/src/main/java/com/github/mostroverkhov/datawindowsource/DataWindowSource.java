@@ -4,11 +4,8 @@ import com.github.mostroverkhov.datawindowsource.callbacks.DataCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.NextWindowCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.NotificationCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.QueryHandle;
-import com.github.mostroverkhov.datawindowsource.model.DataQuery;
-import com.github.mostroverkhov.datawindowsource.model.DataWindowAndNotificationResult;
-import com.github.mostroverkhov.datawindowsource.model.DataWindowResult;
-import com.github.mostroverkhov.datawindowsource.model.NextQueryCurrentCount;
-import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
+import com.github.mostroverkhov.datawindowsource.model.*;
+import com.github.mostroverkhov.datawindowsource.model.DataWindowNotifications;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -150,11 +147,11 @@ public class DataWindowSource {
      */
     public <T> QueryHandle next(final DataQuery dataQuery,
                                 final Class<T> dataItemType,
-                                final DataCallback<T, DataWindowResult<T>> dataCallback) {
+                                final DataCallback<T, DataWindow<T>> dataCallback) {
 
 
         if (dataQuery.isLast()) {
-            dispatchData(new DataWindowResult<>(Collections.<T>emptyList(), dataQuery), dataCallback);
+            dispatchData(new DataWindow<>(Collections.<T>emptyList(), dataQuery), dataCallback);
             return NOOP_DATA_HANDLE;
         }
         final int windowSize = dataQuery.getWindowSize();
@@ -176,7 +173,7 @@ public class DataWindowSource {
 
                 List<T> data = toItemsList(pair.getLeft());
                 DataQuery nextQuery = pair.getRight();
-                dispatchData(new DataWindowResult<>(data, nextQuery), dataCallback);
+                dispatchData(new DataWindow<>(data, nextQuery), dataCallback);
             }
 
             @Override
@@ -206,14 +203,14 @@ public class DataWindowSource {
      */
     public <T> QueryHandle next(final DataQuery dataQuery,
                                 final Class<T> dataItemType,
-                                final DataCallback<T, DataWindowAndNotificationResult<T>> dataCallback,
+                                final DataCallback<T, DataWindowNotifications<T>> dataCallback,
                                 NotificationCallback<T> notificationCallback) {
 
         final NextSignals nextSignals = new NextSignals();
 
         if (dataQuery.isLast()) {
-            DataWindowAndNotificationResult<T> empty =
-                    new DataWindowAndNotificationResult<>(Collections.<T>emptyList(), dataQuery);
+            DataWindowNotifications<T> empty =
+                    new DataWindowNotifications<>(Collections.<T>emptyList(), dataQuery);
             dispatchDataAndNotif(dataCallback, empty);
             return NOOP_DATA_HANDLE;
         }
@@ -248,7 +245,7 @@ public class DataWindowSource {
                 delegatingListener.removeEvents(keyValues);
                 List<T> values = toItemsList(pair.getLeft());
                 DataQuery query = pair.getRight();
-                DataWindowAndNotificationResult<T> result = new DataWindowAndNotificationResult<>(
+                DataWindowNotifications<T> result = new DataWindowNotifications<>(
                         values,
                         query,
                         new NotificationsHandle() {
@@ -294,7 +291,7 @@ public class DataWindowSource {
             public void cancel() {
                 synchronized (lock) {
                     /*unsubscribe only while data is in progress, otherwise clients should use NotificationHandle
-                     from DataWindowAndNotificationResult*/
+                     from DataWindowNotifications*/
                     if (nextSignals.isDataQueryInProgress()) {
                         nextSignals.setCancelled(true);
                         nextSignals.setDataQueryInProgress(false);
@@ -307,7 +304,7 @@ public class DataWindowSource {
     }
 
     private <T> void dispatchDataAndNotifError(final DatabaseError databaseError,
-                                               final DataCallback<T, DataWindowAndNotificationResult<T>> dataCallback) {
+                                               final DataCallback<T, DataWindowNotifications<T>> dataCallback) {
         scheduler.execute(new Runnable() {
             @Override
             public void run() {
@@ -316,8 +313,8 @@ public class DataWindowSource {
         });
     }
 
-    private <T> void dispatchDataAndNotif(final DataCallback<T, DataWindowAndNotificationResult<T>> dataCallback,
-                                          final DataWindowAndNotificationResult<T> dataAndNotification) {
+    private <T> void dispatchDataAndNotif(final DataCallback<T, DataWindowNotifications<T>> dataCallback,
+                                          final DataWindowNotifications<T> dataAndNotification) {
         scheduler.execute(new Runnable() {
             @Override
             public void run() {
@@ -327,7 +324,7 @@ public class DataWindowSource {
     }
 
     private <T> void dispatchDataError(final DatabaseError databaseError,
-                                       final DataCallback<T, DataWindowResult<T>> dataCallback) {
+                                       final DataCallback<T, DataWindow<T>> dataCallback) {
         scheduler.execute(new Runnable() {
             @Override
             public void run() {
@@ -368,7 +365,7 @@ public class DataWindowSource {
         });
     }
 
-    private <T> void dispatchData(final DataWindowResult<T> res, final DataCallback<T, DataWindowResult<T>> callback) {
+    private <T> void dispatchData(final DataWindow<T> res, final DataCallback<T, DataWindow<T>> callback) {
         scheduler.execute(new Runnable() {
             @Override
             public void run() {

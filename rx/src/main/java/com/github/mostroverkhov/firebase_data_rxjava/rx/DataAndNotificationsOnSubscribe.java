@@ -6,7 +6,7 @@ import com.github.mostroverkhov.datawindowsource.callbacks.DataCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.NotificationCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.QueryHandle;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
-import com.github.mostroverkhov.datawindowsource.model.DataWindowAndNotificationResult;
+import com.github.mostroverkhov.datawindowsource.model.DataWindowNotifications;
 import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.model.WindowWithNotifications;
 import com.google.firebase.database.DatabaseError;
@@ -148,7 +148,7 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
             }
         }
 
-        private class RxDataCallback implements DataCallback<T, DataWindowAndNotificationResult<T>> {
+        private class RxDataCallback implements DataCallback<T, DataWindowNotifications<T>> {
             private final Subject<WindowChangeEvent, WindowChangeEvent> childChangeSubject;
             private final Subscriber<? super WindowWithNotifications<T>> readResultSubscriber;
             private final State state;
@@ -179,7 +179,7 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
             }
 
             @Override
-            public void onData(DataWindowAndNotificationResult<T> result) {
+            public void onData(DataWindowNotifications<T> result) {
                 DataQuery curQuery = state.getNext();
                 DataQuery nextQuery = result.getNext();
                 state.setNext(nextQuery);

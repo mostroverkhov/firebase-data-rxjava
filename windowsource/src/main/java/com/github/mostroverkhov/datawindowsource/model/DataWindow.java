@@ -10,11 +10,11 @@ import java.util.List;
  * Window into data for given data query, represented as list of typed elements
  * Used by {@link com.github.mostroverkhov.datawindowsource.DataWindowSource}
  */
-public class DataWindowResult<T> extends NextQuery implements HasDataWindow<T> {
+public class DataWindow<T> extends NextQuery implements HasDataWindow<T> {
 
     private final List<T> data;
 
-    public DataWindowResult(List<T> data, DataQuery next) {
+    public DataWindow(List<T> data, DataQuery next) {
         super(next);
         this.data = data;
     }

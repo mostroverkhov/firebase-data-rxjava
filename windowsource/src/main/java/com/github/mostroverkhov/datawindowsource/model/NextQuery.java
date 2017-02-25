@@ -5,9 +5,9 @@ package com.github.mostroverkhov.datawindowsource.model;
  */
 
 /**
- * Represents query fir next data window
+ * Represents query for next data window
  */
-public class NextQuery {
+public class NextQuery extends DataItem {
 
     private final DataQuery next;
 

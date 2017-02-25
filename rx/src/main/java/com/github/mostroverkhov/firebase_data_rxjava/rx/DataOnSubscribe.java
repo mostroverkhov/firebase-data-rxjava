@@ -3,7 +3,7 @@ package com.github.mostroverkhov.firebase_data_rxjava.rx;
 import com.github.mostroverkhov.datawindowsource.DataWindowSource;
 import com.github.mostroverkhov.datawindowsource.callbacks.DataCallback;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
-import com.github.mostroverkhov.datawindowsource.model.DataWindowResult;
+import com.github.mostroverkhov.datawindowsource.model.DataWindow;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.model.Window;
 import com.google.firebase.database.DatabaseError;
 
@@ -77,7 +77,7 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State, Window<T>> {
             final DataQuery curQuery = state.getNext();
 
             dataWindowSource.next(curQuery, type,
-                    new DataCallback<T, DataWindowResult<T>>() {
+                    new DataCallback<T, DataWindow<T>>() {
 
                         @Override
                         public void onError(DatabaseError e) {
@@ -87,7 +87,7 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State, Window<T>> {
                         }
 
                         @Override
-                        public void onData(DataWindowResult<T> result) {
+                        public void onData(DataWindow<T> result) {
                             state.setNext(result.getNext());
 
                             List<T> data = result.getData();

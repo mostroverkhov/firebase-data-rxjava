@@ -42,7 +42,6 @@ public class FirebaseAuthenticator {
                             .build();
 
                     FirebaseApp.initializeApp(options);
-
             }
         }
     }

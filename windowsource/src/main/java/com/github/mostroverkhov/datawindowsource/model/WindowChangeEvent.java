@@ -3,7 +3,7 @@ package com.github.mostroverkhov.datawindowsource.model;
 /**
  * Event for data window change notifications
  */
-public class WindowChangeEvent<T> {
+public class WindowChangeEvent<T> extends DataItem {
 
     private final String prevChildName;
     private final Kind kind;
@@ -12,7 +12,6 @@ public class WindowChangeEvent<T> {
     public WindowChangeEvent(T item,
                              Kind kind,
                              String prevChildName) {
-
         if (item == null || kind == null) {
             throw new IllegalArgumentException("Item and Kind should not be null");
         }

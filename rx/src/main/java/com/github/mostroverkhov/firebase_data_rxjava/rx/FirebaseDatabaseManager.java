@@ -3,6 +3,7 @@ package com.github.mostroverkhov.firebase_data_rxjava.rx;
 import com.github.mostroverkhov.datawindowsource.CurrentThreadScheduler;
 import com.github.mostroverkhov.datawindowsource.DataWindowSource;
 import com.github.mostroverkhov.datawindowsource.Scheduler;
+import com.github.mostroverkhov.datawindowsource.model.DataItem;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
 import com.github.mostroverkhov.datawindowsource.model.WindowChangeEvent;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.model.Window;
@@ -81,10 +82,11 @@ public class FirebaseDatabaseManager {
          * @param itemType  type of item for window data
          * @return observable of child items events. Buffering is used for backpressure
          */
-        public <T> Observable<WindowChangeEvent<T>> notifications(DataQuery dataQuery,
-                                                                  Class<T> itemType) {
+        public <T> Observable<DataItem> notifications(DataQuery dataQuery,
+                                                      Class<T> itemType) {
             return Observable
                     .create(new NotificationsOnSubscribe<T>(dataQuery, itemType, dataWindowSource))
+                    .serialize()
                     .onBackpressureBuffer();
         }
 
@@ -95,7 +97,7 @@ public class FirebaseDatabaseManager {
          * @param dataQuery determines window into firebase database data
          * @return observable of child items events. Buffering is used for backpressure
          */
-        public Observable<WindowChangeEvent<Object>> notifications(DataQuery dataQuery) {
+        public Observable<DataItem> notifications(DataQuery dataQuery) {
             return notifications(dataQuery, Object.class);
         }
 
