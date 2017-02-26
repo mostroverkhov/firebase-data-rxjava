@@ -5,19 +5,10 @@ import com.github.mostroverkhov.datawindowsource.callbacks.NextWindowCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.NotificationCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.QueryHandle;
 import com.github.mostroverkhov.datawindowsource.model.*;
-import com.github.mostroverkhov.datawindowsource.model.DataWindowNotifications;
-import com.google.firebase.database.ChildEventListener;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseException;
-import com.google.firebase.database.Query;
-import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.database.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created by Maksym Ostroverkhov on 09.07.2016.
@@ -34,7 +25,6 @@ public class DataWindowSource {
             /*noop*/
         }
     };
-    private final Object lock = new Object();
     private final Scheduler scheduler;
 
     /**
@@ -206,7 +196,7 @@ public class DataWindowSource {
                                 final DataCallback<T, DataWindowNotifications<T>> dataCallback,
                                 NotificationCallback<T> notificationCallback) {
 
-        final NextSignals nextSignals = new NextSignals();
+        final AtomicReference<State> stateRef = new AtomicReference<>(State.QUERY_START);
 
         if (dataQuery.isLast()) {
             DataWindowNotifications<T> empty =
@@ -263,13 +253,8 @@ public class DataWindowSource {
                             }
                         });
                 /*deliver if was not cancelled while processing onDataChange*/
-                synchronized (lock) {
-                    if (!nextSignals.isCancelled()) {
-                        dispatchDataAndNotif(dataCallback, result);
-                    }
-                    /*clean up query state*/
-                    nextSignals.setDataQueryInProgress(false);
-                    nextSignals.setCancelled(false);
+                if (stateRef.compareAndSet(State.QUERY_START, State.QUERY_FINISH)) {
+                    dispatchDataAndNotif(dataCallback, result);
                 }
 
             }
@@ -280,24 +265,17 @@ public class DataWindowSource {
             }
         };
 
-        synchronized (lock) {
-            childDbRef.addChildEventListener(delegatingListener);
-            dataDbRef.addListenerForSingleValueEvent(valueEventListener);
-            nextSignals.setDataQueryInProgress(true);
-        }
+        childDbRef.addChildEventListener(delegatingListener);
+        dataDbRef.addListenerForSingleValueEvent(valueEventListener);
 
         return new QueryHandle() {
             @Override
             public void cancel() {
-                synchronized (lock) {
                     /*unsubscribe only while data is in progress, otherwise clients should use NotificationHandle
                      from DataWindowNotifications*/
-                    if (nextSignals.isDataQueryInProgress()) {
-                        nextSignals.setCancelled(true);
-                        nextSignals.setDataQueryInProgress(false);
-                        childDbRef.removeEventListener(delegatingListener);
-                        dataDbRef.removeEventListener(valueEventListener);
-                    }
+                if (stateRef.compareAndSet(State.QUERY_START, State.QUERY_CANCEL)) {
+                    childDbRef.removeEventListener(delegatingListener);
+                    dataDbRef.removeEventListener(valueEventListener);
                 }
             }
         };
@@ -766,29 +744,30 @@ public class DataWindowSource {
         }
     }
 
-    private static class NextSignals {
-        /*used to cancel data notification, if cancel was issued after native data callback, but before
+    private static class State {
+        /*used to cancel data notification, if cancel was issued after firebase data callback, but before
         * delivering data to client*/
-        private boolean isCancelled;
+        private final boolean isDataQueryCancelled;
         /*used to cancel child event notifications (c.e.n.) ONLY for data query which is in progress. Once
         * data is delivered, client should use c.e.n handle to cancel c.e.n.*/
-        private boolean isDataQueryInProgress;
+        private final boolean isDataQueryInProgress;
 
-        public boolean isCancelled() {
-            return isCancelled;
+        public State(boolean isDataQueryInProgress, boolean isDataQueryCancelled) {
+            this.isDataQueryCancelled = isDataQueryCancelled;
+            this.isDataQueryInProgress = isDataQueryInProgress;
         }
 
-        public void setCancelled(boolean cancelled) {
-            isCancelled = cancelled;
+        public boolean isDataQueryCancelled() {
+            return isDataQueryCancelled;
         }
 
         public boolean isDataQueryInProgress() {
             return isDataQueryInProgress;
         }
 
-        public void setDataQueryInProgress(boolean dataQueryInProgress) {
-            isDataQueryInProgress = dataQueryInProgress;
-        }
+        static final State QUERY_START = new State(true, false);
+        static final State QUERY_FINISH = new State(false, false);
+        static final State QUERY_CANCEL = new State(true, true);
     }
 
     static class Pair<L, R> {
