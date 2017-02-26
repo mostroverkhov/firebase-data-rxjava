@@ -1,4 +1,6 @@
 apply plugin: 'java'
+apply plugin: 'net.ltgt.errorprone'
+
 sourceCompatibility=JavaVersion.VERSION_1_7
 targetCompatibility=JavaVersion.VERSION_1_7
 
@@ -6,5 +8,8 @@ dependencies {
     compile project(":windowsource")
     // https://mvnrepository.com/artifact/io.reactivex/rxjava
     compile group: 'io.reactivex', name: 'rxjava', version: '1.2.6'
+}
+configurations.errorprone {
+    resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.0.17'
 }
 
