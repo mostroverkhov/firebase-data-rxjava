@@ -3,17 +3,24 @@ package com.github.mostroverkhov.firebase_data_rxjava.rx;
 
 import com.github.mostroverkhov.datawindowsource.callbacks.QueryHandle;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
+import com.github.mostroverkhov.firebase_data_rxjava.rx.DataOnSubscribe.DataWindowOnSubscribe;
 
 import java.util.HashSet;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Maksym Ostroverkhov on 20.07.2016.
  */
-class State {
+class State<T> {
     private volatile DataQuery dataQuery;
     private final Set<QueryHandle> queryHandles = new HashSet<>();
     private final Object lock = new Object();
+    private final Queue<DataWindowOnSubscribe<T>> subscribeFuncs =
+            new ConcurrentLinkedQueue<>();
+    private final AtomicInteger observablesCount = new AtomicInteger();
 
     public State(DataQuery dataQuery) {
         this.dataQuery = dataQuery;
@@ -27,7 +34,6 @@ class State {
         this.dataQuery = dataQuery;
     }
 
-
     public void cancelDataHandles() {
         synchronized (lock) {
             for (QueryHandle queryHandle : queryHandles) {
@@ -37,10 +43,12 @@ class State {
         }
     }
 
-    public boolean hasDataHandles() {
-        synchronized (lock) {
-            return !queryHandles.isEmpty();
-        }
+    public Queue<DataWindowOnSubscribe<T>> getSubscribeFuncs() {
+        return subscribeFuncs;
+    }
+
+    public AtomicInteger observablesCount() {
+        return observablesCount;
     }
 
     public void addQueryHandle(QueryHandle queryHandle) {
@@ -56,5 +64,4 @@ class State {
             }
         }
     }
-
 }

@@ -6,18 +6,17 @@ import com.github.mostroverkhov.datawindowsource.model.DataQuery;
 import com.github.mostroverkhov.datawindowsource.model.DataWindow;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.model.Window;
 import com.google.firebase.database.DatabaseError;
-
-import java.util.List;
-
 import rx.Observable;
 import rx.Observer;
 import rx.Subscriber;
 import rx.observables.AsyncOnSubscribe;
 
+import java.util.List;
+
 /**
  * Created by Maksym Ostroverkhov on 20.07.2016.
  */
-class DataOnSubscribe<T> extends AsyncOnSubscribe<State, Window<T>> {
+class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
     private final DataWindowSource dataWindowSource;
     private final DataQuery dataQuery;
     private final Class<T> type;
@@ -31,51 +30,95 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State, Window<T>> {
     }
 
     @Override
-    protected State generateState() {
-        return new State(dataQuery);
+    protected State<T> generateState() {
+        return new State<>(dataQuery);
     }
 
     @Override
-    protected State next(State state, long requested, Observer<Observable<? extends Window<T>>> observer) {
-        observer.onNext(Observable.create(new DataWindowOnSubscribe<>(dataWindowSource, requested, type, state, observer))
-                .onBackpressureBuffer());
+    protected State<T> next(final State<T> state,
+                            long requested,
+                            Observer<Observable<? extends Window<T>>> observer) {
+        DataWindowOnSubscribe<T> dataWindowOnSubscribe =
+                new DataWindowOnSubscribe<>(dataWindowSource,
+                        requested,
+                        type,
+                        state,
+                        observer,
+                        new DataWindowProcessedCallback() {
+                            @Override
+                            public void requestProcessed(boolean dataAvailable) {
+                                if (state.observablesCount().decrementAndGet() != 0) {
+                                    queryNextWindow(state);
+                                }
+                            }
+                        });
+
+        state.getSubscribeFuncs().offer(dataWindowOnSubscribe);
+        if (state.observablesCount().getAndIncrement() == 0) {
+            queryNextWindow(state);
+        }
+        observer.onNext(Observable.create(dataWindowOnSubscribe));
 
         return state;
     }
 
-    private static class DataWindowOnSubscribe<T> implements Observable.OnSubscribe<Window<T>> {
+    private void queryNextWindow(final State<T> state) {
+
+        DataWindowOnSubscribe<T> windowObservable = state.getSubscribeFuncs().poll();
+        windowObservable.enable();
+    }
+
+    static class DataWindowOnSubscribe<T> implements Observable.OnSubscribe<Window<T>> {
 
         private final DataWindowSource dataWindowSource;
         private final long requested;
         private final Class<T> type;
         private final State state;
         private final Observer<Observable<? extends Window<T>>> observer;
-        private volatile boolean isInterrupted;
+        private final DataWindowProcessedCallback dataWindowProcessedCallback;
+        private volatile boolean stopCurrentRound;
+        private volatile boolean isDataAvailable = true;
+        private volatile boolean isEnabled;
+        private volatile boolean isSubscribed;
+        private volatile Subscriber<? super Window<T>> subscriber;
 
         public DataWindowOnSubscribe(DataWindowSource dataWindowSource,
                                      long requested,
                                      Class<T> type,
                                      State state,
-                                     Observer<Observable<? extends Window<T>>> observer) {
+                                     Observer<Observable<? extends Window<T>>> observer,
+                                     DataWindowProcessedCallback dataWindowProcessedCallback) {
             this.dataWindowSource = dataWindowSource;
             this.requested = requested;
             this.type = type;
             this.state = state;
             this.observer = observer;
+            this.dataWindowProcessedCallback = dataWindowProcessedCallback;
+        }
+
+        public void enable() {
+            isEnabled = true;
+            dispatchChange();
         }
 
         @Override
         public void call(final Subscriber<? super Window<T>> subscriber) {
-            nextWindow(subscriber, dataWindowSource, 0);
+            this.subscriber = subscriber;
+            this.isSubscribed = true;
+            dispatchChange();
         }
 
+        private void dispatchChange() {
+            if (isSubscribed && isEnabled) {
+                nextWindow(subscriber, dataWindowSource, 0);
+            }
+        }
 
         private void nextWindow(final Subscriber<? super Window<T>> subscriber,
                                 final DataWindowSource dataWindowSource,
                                 final long index) {
 
             final DataQuery curQuery = state.getNext();
-
             dataWindowSource.next(curQuery, type,
                     new DataCallback<T, DataWindow<T>>() {
 
@@ -93,22 +136,25 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State, Window<T>> {
                             List<T> data = result.getData();
 
                             if (subscriber.isUnsubscribed()) {
-                                isInterrupted = true;
+                                stopCurrentRound = true;
                             } else if (!data.isEmpty()) {
                                 subscriber.onNext(new Window<>(data, curQuery));
 
                                 if (isLast(index)) {
                                     subscriber.onCompleted();
-                                    isInterrupted = true;
+                                    stopCurrentRound = true;
                                 }
                             /*empty data - signal interrupt*/
                             } else {
                                 subscriber.onCompleted();
                                 observer.onCompleted();
-                                isInterrupted = true;
+                                stopCurrentRound = true;
+                                isDataAvailable = false;
                             }
-                            if (!isInterrupted) {
+                            if (!stopCurrentRound) {
                                 nextWindow(subscriber, dataWindowSource, index + 1);
+                            } else {
+                                dataWindowProcessedCallback.requestProcessed(isDataAvailable);
                             }
                         }
 
@@ -117,5 +163,10 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State, Window<T>> {
                         }
                     });
         }
+    }
+
+    interface DataWindowProcessedCallback {
+
+        void requestProcessed(boolean dataAvailable);
     }
 }

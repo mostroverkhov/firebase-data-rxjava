@@ -1,15 +1,61 @@
 apply plugin: 'java'
 apply plugin: 'net.ltgt.errorprone'
+apply plugin: 'maven'
 
 sourceCompatibility=JavaVersion.VERSION_1_7
 targetCompatibility=JavaVersion.VERSION_1_7
 
 dependencies {
-    compile project(":windowsource")
+    compile group: 'com.github.mostroverkhov', name: 'firebase-data', version: '0.1.1'
     // https://mvnrepository.com/artifact/io.reactivex/rxjava
     compile group: 'io.reactivex', name: 'rxjava', version: '1.2.6'
 }
 configurations.errorprone {
     resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.0.17'
 }
+
+task sourcesJar(type: Jar, dependsOn:classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives sourcesJar
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            def ext = rootProject.ext
+
+            repository(url: ext.libDeployUrl)
+            pom.version = ext.libRxVersion
+            pom.groupId = ext.libGroupId
+            pom.artifactId = 'firebase-data-rxjava'
+
+            pom.project {
+
+                name 'firebase-data-rxjava'
+                packaging jar
+                description 'Reactive interface for Firebase Realtime Database'
+
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'main'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'mostroverkhov'
+                        name 'Maks Ostroverkhov'
+                    }
+                }
+            }
+        }
+    }
+}
+
 
