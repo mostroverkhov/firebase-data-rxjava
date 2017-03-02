@@ -17,6 +17,7 @@ allprojects {
     repositories {
         jcenter()
         mavenCentral()
+        mavenLocal()
     }
 }
 
@@ -25,7 +26,7 @@ task clean(type: Delete) {
 }
 
 ext {
-    libVersion = '0.1'
+    libVersion = '0.1.1'
     libGroupId = 'com.github.mostroverkhov'
     libDeployUrl = project.repositories.mavenLocal().url
 }

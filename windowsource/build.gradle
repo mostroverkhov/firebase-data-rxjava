@@ -1,5 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'net.ltgt.errorprone'
+apply plugin: 'maven'
 
 sourceCompatibility = JavaVersion.VERSION_1_7
 targetCompatibility = JavaVersion.VERSION_1_7
@@ -10,4 +11,48 @@ dependencies {
 
 configurations.errorprone {
     resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.0.17'
+}
+
+task sourcesJar(type: Jar, dependsOn:classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives sourcesJar
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            def ext = rootProject.ext
+
+            repository(url: ext.libDeployUrl)
+            pom.version = ext.libVersion
+            pom.groupId = ext.libGroupId
+            pom.artifactId = 'firebase-data'
+
+            pom.project {
+
+                name 'firebase-data'
+                packaging jar
+                description 'Set of read/write utils for Firebase Realtime Database'
+
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'main'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'mostroverkhov'
+                        name 'Maks Ostroverkhov'
+                    }
+                }
+            }
+        }
+    }
 }

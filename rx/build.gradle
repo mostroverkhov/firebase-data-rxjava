@@ -6,12 +6,21 @@ sourceCompatibility=JavaVersion.VERSION_1_7
 targetCompatibility=JavaVersion.VERSION_1_7
 
 dependencies {
-    compile project(":windowsource")
+    compile group: 'com.github.mostroverkhov', name: 'firebase-data', version: '0.1.1'
     // https://mvnrepository.com/artifact/io.reactivex/rxjava
     compile group: 'io.reactivex', name: 'rxjava', version: '1.2.6'
 }
 configurations.errorprone {
     resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.0.17'
+}
+
+task sourcesJar(type: Jar, dependsOn:classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives sourcesJar
 }
 
 uploadArchives {
