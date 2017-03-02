@@ -28,7 +28,7 @@ uploadArchives {
             def ext = rootProject.ext
 
             repository(url: ext.libDeployUrl)
-            pom.version = ext.libVersion
+            pom.version = ext.windowSourceVersion
             pom.groupId = ext.libGroupId
             pom.artifactId = 'firebase-data'
 

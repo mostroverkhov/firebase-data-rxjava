@@ -26,7 +26,8 @@ task clean(type: Delete) {
 }
 
 ext {
-    libVersion = '0.1.1'
+    libRxVersion = '0.1.2'
+    windowSourceVersion = '0.1.1'
     libGroupId = 'com.github.mostroverkhov'
     libDeployUrl = project.repositories.mavenLocal().url
 }
