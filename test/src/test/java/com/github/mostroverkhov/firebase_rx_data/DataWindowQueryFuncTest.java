@@ -56,7 +56,7 @@ public class DataWindowQueryFuncTest extends AbstractTest {
         List<Recorder.Event> nexts = recorder.getNexts();
         List<Recorder.Event> errors = recorder.getErrors();
 
-        assertWindowEvents(events, nexts, errors);
+        assertSuccessWindowEvents(events, nexts, errors);
 
         List<Data> allData = allNextEvents(nexts);
         for (int i = 0; i < allData.size(); i++) {
@@ -65,6 +65,25 @@ public class DataWindowQueryFuncTest extends AbstractTest {
             Assert.assertEquals("Data order should be asc", expectedId, actualData.getId());
         }
     }
+
+    @Test(timeout = 10_000)
+    public void dataQueryMissingNodeTest() throws Exception {
+
+        final DataQuery dataQuery = new DataQuery.Builder(dbRef.child("missing"))
+                .asc()
+                .windowWithSize(WINDOW_SIZE)
+                .build();
+
+        final Recorder recorder = performWindowQuery(dataQuery, Data.class);
+        List<Recorder.Event> nexts = recorder.getNexts();
+        List<Recorder.Event> errors = recorder.getErrors();
+        List<Recorder.Event> completes = recorder.getCompletes();
+
+        Assert.assertEquals(0, errors.size());
+        Assert.assertEquals(0, nexts.size());
+        Assert.assertEquals(1, completes.size());
+    }
+
 
     @Test(timeout = 10_000)
     public void dataQueryDescTest() throws Exception {
@@ -78,7 +97,7 @@ public class DataWindowQueryFuncTest extends AbstractTest {
         List<Recorder.Event> events = recorder.getEvents();
         List<Recorder.Event> nexts = recorder.getNexts();
         List<Recorder.Event> errors = recorder.getErrors();
-        assertWindowEvents(events, nexts, errors);
+        assertSuccessWindowEvents(events, nexts, errors);
 
         List<Data> allData = allNextEvents(nexts);
         for (int i = 0; i < allData.size(); i++) {
@@ -116,9 +135,9 @@ public class DataWindowQueryFuncTest extends AbstractTest {
         return allData;
     }
 
-    private void assertWindowEvents(List<Recorder.Event> events,
-                                    List<Recorder.Event> nexts,
-                                    List<Recorder.Event> errors) {
+    private void assertSuccessWindowEvents(List<Recorder.Event> events,
+                                           List<Recorder.Event> nexts,
+                                           List<Recorder.Event> errors) {
         Assert.assertEquals("window() onCompleted should be consistent",
                 Recorder.Event.Type.COMPLETE, events.get(events.size() - 1).getType());
         Assert.assertEquals("window() onError should be consistent",

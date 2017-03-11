@@ -78,8 +78,8 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
         private final DataWindowProcessedCallback dataWindowProcessedCallback;
         private volatile boolean stopCurrentRound;
         private volatile boolean isDataAvailable = true;
-        private volatile boolean isEnabled;
-        private volatile boolean isSubscribed;
+        private volatile boolean enableCalled;
+        private volatile boolean subscribeCalled;
         private volatile Subscriber<? super Window<T>> subscriber;
 
         public DataWindowOnSubscribe(DataWindowSource dataWindowSource,
@@ -97,27 +97,30 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
         }
 
         public void enable() {
-            isEnabled = true;
+            enableCalled = true;
             dispatchChange();
         }
 
         @Override
         public void call(final Subscriber<? super Window<T>> subscriber) {
             this.subscriber = subscriber;
-            this.isSubscribed = true;
+            this.subscribeCalled = true;
             dispatchChange();
         }
 
         private void dispatchChange() {
-            if (isSubscribed && isEnabled) {
-                nextWindow(subscriber, dataWindowSource, 0);
+            if (subscribeCalled && enableCalled) {
+                nextWindow(subscriber, observer, dataWindowSource, 0);
             }
         }
 
         private void nextWindow(final Subscriber<? super Window<T>> subscriber,
+                                final Observer<Observable<? extends Window<T>>> observer,
                                 final DataWindowSource dataWindowSource,
                                 final long index) {
-
+            if (subscriber.isUnsubscribed()) {
+                return;
+            }
             final DataQuery curQuery = state.getNext();
             dataWindowSource.next(curQuery, type,
                     new DataCallback<T, DataWindow<T>>() {
@@ -152,7 +155,7 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
                                 isDataAvailable = false;
                             }
                             if (!stopCurrentRound) {
-                                nextWindow(subscriber, dataWindowSource, index + 1);
+                                nextWindow(subscriber, observer, dataWindowSource, index + 1);
                             } else {
                                 dataWindowProcessedCallback.requestProcessed(isDataAvailable);
                             }
