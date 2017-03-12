@@ -12,6 +12,7 @@ import rx.Subscriber;
 import rx.observables.AsyncOnSubscribe;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Maksym Ostroverkhov on 20.07.2016.
@@ -47,8 +48,13 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
                         new DataWindowProcessedCallback() {
                             @Override
                             public void requestProcessed(boolean dataAvailable) {
-                                if (state.observablesCount().decrementAndGet() != 0) {
-                                    queryNextWindow(state);
+                                AtomicInteger observablesCount = state.observablesCount();
+                                if (observablesCount.decrementAndGet() != 0) {
+                                    if (dataAvailable) {
+                                        queryNextWindow(state);
+                                    } else {
+                                        completeWindowObservables(observablesCount, state);
+                                    }
                                 }
                             }
                         });
@@ -60,6 +66,13 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
         observer.onNext(Observable.create(dataWindowOnSubscribe));
 
         return state;
+    }
+
+    private void completeWindowObservables(AtomicInteger observablesCount, State<T> state) {
+        observablesCount.set(0);
+        for (DataWindowOnSubscribe<T> f : state.getSubscribeFuncs()) {
+            f.complete();
+        }
     }
 
     private void queryNextWindow(final State<T> state) {
@@ -99,6 +112,12 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
         public void enable() {
             enableCalled = true;
             dispatchChange();
+        }
+
+        public void complete() {
+            if (subscriber != null) {
+                subscriber.onCompleted();
+            }
         }
 
         @Override
