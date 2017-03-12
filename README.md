@@ -1,3 +1,5 @@
+[![](https://jitpack.io/v/mostroverkhov/firebase-data-rxjava.svg)](https://jitpack.io/#mostroverkhov/firebase-data-rxjava)
+
 # firebase-data-rxjava
 
 Simplifies firebase interaction for both client and server by providing set
@@ -23,3 +25,35 @@ API mirrors native firebase one, with 3 operations defined:
 1. `setValue`
 2. `updateChildren`
 3. `removeValue`
+
+####Artifacts
+Artifacts are available through jitpack
+
+#####Maven
+```
+   <repositories>
+  		<repository>
+	     <id>jitpack.io</id>
+   		 <url>https://jitpack.io</url>
+		 </repository>
+  </repositories>
+```
+```
+<dependency>
+	    <groupId>com.github.mostroverkhov.firebase-data-rxjava</groupId>
+	    <artifactId>rx</artifactId>
+	    <version>0.1.8</version>
+	</dependency>
+  ```
+  
+#####Gradle
+```
+  repositories {
+			maven { url 'https://jitpack.io' }
+		}
+```
+```
+    dependencies {
+	        compile 'com.github.mostroverkhov.firebase-data-rxjava:rx:0.1.8'
+	}
+```
