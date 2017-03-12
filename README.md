@@ -1,5 +1,3 @@
-[![](https://jitpack.io/v/mostroverkhov/firebase-data-rxjava.svg)](https://jitpack.io/#mostroverkhov/firebase-data-rxjava)
-
 # firebase-data-rxjava
 
 Simplifies firebase interaction for both client and server by providing set
@@ -27,7 +25,9 @@ API mirrors native firebase one, with 3 operations defined:
 3. `removeValue`
 
 ####Artifacts
-Artifacts are available through jitpack
+Artifacts are available on jitpack   
+[![](https://jitpack.io/v/mostroverkhov/firebase-data-rxjava.svg)](https://jitpack.io/#mostroverkhov/firebase-data-rxjava)
+
 
 #####Maven
 ```
