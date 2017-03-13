@@ -25,7 +25,7 @@ import rx.schedulers.Schedulers;
  * Created by Maksym Ostroverkhov on 15.02.2017.
  */
 
-public class WriteFuncTest extends AbstractTest {
+public class UpdateFuncTest extends AbstractTest {
 
     private static final String[] TEST_WRITE_PATH = {"test", "write"};
     private DatabaseReference dbRef;
@@ -55,7 +55,7 @@ public class WriteFuncTest extends AbstractTest {
     }
 
     @Test(timeout = 10_000)
-    public void deleteChild() throws Exception {
+    public void deleteChildPresent() throws Exception {
 
         final Data data = new Data(42, String.valueOf(42));
         final DatabaseReference writeRef = dbRef.push();
@@ -73,13 +73,32 @@ public class WriteFuncTest extends AbstractTest {
             List<Recorder.Event> events = recorder.getEvents();
             List<Recorder.Event> errors = recorder.getErrors();
             List<Recorder.Event> nexts = recorder.getNexts();
-            Assert.assertEquals("window() onCompleted should be consistent",
+            Assert.assertEquals("onComplete should be consistent",
                     Recorder.Event.Type.COMPLETE, events.get(events.size() - 1).getType());
-            Assert.assertEquals("window() onError should be consistent", 0, errors.size());
-            Assert.assertEquals("window() onNext should be consistent", 1, nexts.size());
+            Assert.assertEquals("onError should be consistent", 0, errors.size());
+            Assert.assertEquals("onNext should be consistent", 1, nexts.size());
         } finally {
             writeRef.removeValue();
         }
+    }
+
+    @Test(timeout = 10_000)
+    public void deleteChildMissing() throws Exception {
+
+        final DatabaseReference writeRef = dbRef.child("missing");
+        final Recorder recorder = new Recorder();
+        databaseManager = new FirebaseDatabaseManager(writeRef);
+        databaseManager.data().removeValue()
+                .observeOn(Schedulers.io())
+                .toBlocking()
+                .subscribe(new DeleteSubscriber(writeRef, recorder));
+
+        List<Recorder.Event> errors = recorder.getErrors();
+        List<Recorder.Event> nexts = recorder.getNexts();
+        List<Recorder.Event> completes = recorder.getCompletes();
+        Assert.assertEquals("onError should be consistent", 0, errors.size());
+        Assert.assertEquals("onNext should be consistent", 1, nexts.size());
+        Assert.assertEquals("onComplete should be consistent", 1, completes.size());
     }
 
     private static class WriteSubscriber extends Subscriber<WriteResult> {
