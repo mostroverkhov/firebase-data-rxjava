@@ -105,12 +105,10 @@ public class UpdateFuncTest extends AbstractTest {
 
         private final Recorder recorder;
         private final Data data;
-        private final CountDownLatch latch;
 
         public WriteSubscriber(Recorder recorder, Data data) {
             this.recorder = recorder;
             this.data = data;
-            this.latch = new CountDownLatch(1);
         }
 
         @Override
@@ -132,20 +130,13 @@ public class UpdateFuncTest extends AbstractTest {
                         public void onDataChange(DataSnapshot dataSnapshot) {
                             Data value = dataSnapshot.getValue(Data.class);
                             Assert.assertEquals("Data written should be consistent", data, value);
-                            latch.countDown();
                         }
 
                         @Override
                         public void onCancelled(DatabaseError databaseError) {
-                            latch.countDown();
                             throw new IllegalStateException("Database error while reading back written data: " + databaseError);
                         }
                     });
-            try {
-                latch.await();
-            } catch (InterruptedException e) {
-                //safe to ignore
-            }
         }
     }
 
@@ -171,27 +162,19 @@ public class UpdateFuncTest extends AbstractTest {
         @Override
         public void onNext(WriteResult writeResult) {
             recorder.recordNext(writeResult);
-            final CountDownLatch latch = new CountDownLatch(1);
             originalWriteRef.addListenerForSingleValueEvent(new ValueEventListener() {
 
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
                     Object value = dataSnapshot.getValue();
                     Assert.assertNull(value);
-                    latch.countDown();
                 }
 
                 @Override
                 public void onCancelled(DatabaseError databaseError) {
-                    latch.countDown();
                     throw new IllegalStateException("Database error while reading deleted data: " + databaseError);
                 }
             });
-            try {
-                latch.await();
-            } catch (InterruptedException e) {
-                //safe to ignore
-            }
         }
     }
 }
