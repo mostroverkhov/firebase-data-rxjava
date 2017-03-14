@@ -45,19 +45,7 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
                         type,
                         state,
                         observer,
-                        new DataWindowProcessedCallback() {
-                            @Override
-                            public void requestProcessed(boolean dataAvailable) {
-                                AtomicInteger observablesCount = state.observablesCount();
-                                if (observablesCount.decrementAndGet() != 0) {
-                                    if (dataAvailable) {
-                                        queryNextWindow(state);
-                                    } else {
-                                        completeWindowObservables(observablesCount, state);
-                                    }
-                                }
-                            }
-                        });
+                        new WindowProcessedCallback(state));
 
         state.getSubscribeFuncs().offer(dataWindowOnSubscribe);
         if (state.observablesCount().getAndIncrement() == 0) {
@@ -66,13 +54,6 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
         observer.onNext(Observable.create(dataWindowOnSubscribe));
 
         return state;
-    }
-
-    private void completeWindowObservables(AtomicInteger observablesCount, State<T> state) {
-        observablesCount.set(0);
-        for (DataWindowOnSubscribe<T> f : state.getSubscribeFuncs()) {
-            f.complete();
-        }
     }
 
     private void queryNextWindow(final State<T> state) {
@@ -190,5 +171,32 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
     interface DataWindowProcessedCallback {
 
         void requestProcessed(boolean dataAvailable);
+    }
+
+    private class WindowProcessedCallback implements DataWindowProcessedCallback {
+        private final State<T> state;
+
+        public WindowProcessedCallback(State<T> state) {
+            this.state = state;
+        }
+
+        @Override
+        public void requestProcessed(boolean dataAvailable) {
+            AtomicInteger observablesCount = state.observablesCount();
+            if (observablesCount.decrementAndGet() != 0) {
+                if (dataAvailable) {
+                    queryNextWindow(state);
+                } else {
+                    completeWindowObservables(observablesCount, state);
+                }
+            }
+        }
+
+        private void completeWindowObservables(AtomicInteger observablesCount, State<T> state) {
+            observablesCount.set(0);
+            for (DataWindowOnSubscribe<T> f : state.getSubscribeFuncs()) {
+                f.complete();
+            }
+        }
     }
 }

@@ -5,6 +5,8 @@ import com.github.mostroverkhov.datawindowsource.callbacks.NextWindowCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.NotificationCallback;
 import com.github.mostroverkhov.datawindowsource.callbacks.QueryHandle;
 import com.github.mostroverkhov.datawindowsource.model.*;
+import com.github.mostroverkhov.datawindowsource.util.KeyValue;
+import com.github.mostroverkhov.datawindowsource.util.Pair;
 import com.google.firebase.database.*;
 
 import java.util.*;
@@ -569,181 +571,6 @@ public class DataWindowSource {
         return dbRef;
     }
 
-    private static class KeyValue<T> {
-        private final String key;
-        private final T value;
-
-        public KeyValue(String key, T value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        public String getKey() {
-            return key;
-        }
-
-        public T getValue() {
-            return value;
-        }
-
-        @Override
-        public String toString() {
-            final StringBuilder sb = new StringBuilder("DataItem{");
-            sb.append("key='").append(key).append('\'');
-            sb.append(", value=").append(value);
-            sb.append('}');
-            return sb.toString();
-        }
-    }
-
-    private static class DelegatingChildEventListener<T> implements ChildEventListener {
-
-        private final LinkedHashMap<KeyAndKind, DataSnapshot> cachedEvents = new LinkedHashMap<>();
-        private final Scheduler scheduler;
-        private final NotificationCallback<T> notificationCallback;
-        private final Class<T> itemType;
-        private volatile boolean dispatchToCallback = false;
-        private final Object lock = new Object();
-
-        public DelegatingChildEventListener(Scheduler scheduler,
-                                            NotificationCallback<T> notificationCallback,
-                                            Class<T> itemType) {
-            this.scheduler = scheduler;
-            this.notificationCallback = notificationCallback;
-            this.itemType = itemType;
-        }
-
-        @Override
-        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-            processChildEvent(dataSnapshot, itemType, WindowChangeEvent.Kind.ADDED);
-        }
-
-        @Override
-        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-            processChildEvent(dataSnapshot, itemType, WindowChangeEvent.Kind.CHANGED);
-        }
-
-        @Override
-        public void onChildRemoved(DataSnapshot dataSnapshot) {
-            processChildEvent(dataSnapshot, itemType, WindowChangeEvent.Kind.REMOVED);
-        }
-
-        @Override
-        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-            processChildEvent(dataSnapshot, itemType, WindowChangeEvent.Kind.MOVED);
-        }
-
-        private void processChildEvent(DataSnapshot dataSnapshot,
-                                       Class<T> type,
-                                       WindowChangeEvent.Kind kind) {
-
-            T value = dataSnapshot.getValue(type);
-
-            if (value != null) {
-                WindowChangeEvent<T> event = new WindowChangeEvent<>(
-                        value,
-                        kind);
-
-                synchronized (lock) {
-                    if (dispatchToCallback) {
-                        dispatchDataNotificationEvent(event);
-                    } else {
-                        cachedEvents.put(new KeyAndKind(dataSnapshot.getKey(), kind),
-                                dataSnapshot);
-                    }
-                }
-            }
-        }
-
-        @Override
-        public void onCancelled(DatabaseError databaseError) {
-            dispatchDataNotificationError(databaseError);
-        }
-
-
-        public void removeEvents(List<KeyValue<T>> keyValues) {
-            synchronized (lock) {
-                for (KeyValue<T> keyValue : keyValues) {
-                    cachedEvents.remove(new KeyAndKind(
-                            keyValue.getKey(),
-                            WindowChangeEvent.Kind.ADDED));
-                }
-            }
-        }
-
-        public void dispatchChildEvents() {
-            synchronized (lock) {
-                for (Map.Entry<KeyAndKind, DataSnapshot> event : cachedEvents.entrySet()) {
-                    T value = event.getValue().getValue(itemType);
-
-                    if (value != null) {
-                        dispatchDataNotificationEvent(new WindowChangeEvent<>(
-                                value,
-                                event.getKey().getKind()));
-                    }
-                }
-                cachedEvents.clear();
-            }
-            dispatchToCallback = true;
-        }
-
-        private void dispatchDataNotificationEvent(final WindowChangeEvent<T> event) {
-            scheduler.execute(new Runnable() {
-                @Override
-                public void run() {
-                    notificationCallback.onChildChanged(event);
-                }
-            });
-        }
-
-        private void dispatchDataNotificationError(final DatabaseError databaseError) {
-            scheduler.execute(new Runnable() {
-                @Override
-                public void run() {
-                    notificationCallback.onError(databaseError);
-                }
-            });
-        }
-    }
-
-    private static class KeyAndKind {
-
-        private final String key;
-        private final WindowChangeEvent.Kind kind;
-
-        public KeyAndKind(String key, WindowChangeEvent.Kind kind) {
-            this.key = key;
-            this.kind = kind;
-        }
-
-        public String getKey() {
-            return key;
-        }
-
-        public WindowChangeEvent.Kind getKind() {
-            return kind;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            KeyAndKind that = (KeyAndKind) o;
-
-            if (!key.equals(that.key)) return false;
-            return kind == that.kind;
-
-        }
-
-        @Override
-        public int hashCode() {
-            int result = key.hashCode();
-            result = 31 * result + kind.hashCode();
-            return result;
-        }
-    }
-
     private static class State {
         /*used to cancel data notification, if cancel was issued after firebase data callback, but before
         * delivering data to client*/
@@ -768,34 +595,6 @@ public class DataWindowSource {
         static final State QUERY_START = new State(true, false);
         static final State QUERY_FINISH = new State(false, false);
         static final State QUERY_CANCEL = new State(true, true);
-    }
-
-    static class Pair<L, R> {
-
-        private final L left;
-        private final R right;
-
-        public Pair(L left, R right) {
-            this.left = left;
-            this.right = right;
-        }
-
-        public L getLeft() {
-            return left;
-        }
-
-        public R getRight() {
-            return right;
-        }
-
-        @Override
-        public String toString() {
-            final StringBuilder sb = new StringBuilder("Pair{");
-            sb.append("left=").append(left);
-            sb.append(", right=").append(right);
-            sb.append('}');
-            return sb.toString();
-        }
     }
 
 }
