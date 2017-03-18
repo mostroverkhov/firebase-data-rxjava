@@ -53,7 +53,7 @@ repositories {
 }
 ```
 ```
-    dependencies {
-	        compile 'com.github.mostroverkhov.firebase-data-rxjava:rx:0.1.8'
-	}
+dependencies {
+    compile 'com.github.mostroverkhov.firebase-data-rxjava:rx:0.1.8'
+}
 ```
