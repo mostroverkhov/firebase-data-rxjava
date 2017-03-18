@@ -31,26 +31,26 @@ Artifacts are available on jitpack
 
 ##### Maven
 ```
-   <repositories>
-  		<repository>
-	     <id>jitpack.io</id>
-   		 <url>https://jitpack.io</url>
-		 </repository>
-  </repositories>
+<repositories>
+   <repository>
+     <id>jitpack.io</id>
+     <url>https://jitpack.io</url>
+     </repository>
+</repositories>
 ```
 ```
 <dependency>
-	    <groupId>com.github.mostroverkhov.firebase-data-rxjava</groupId>
-	    <artifactId>rx</artifactId>
-	    <version>0.1.8</version>
-	</dependency>
+   <groupId>com.github.mostroverkhov.firebase-data-rxjava</groupId>
+   <artifactId>rx</artifactId>
+   <version>0.1.8</version>
+</dependency>
   ```
   
 ##### Gradle
 ```
-  repositories {
-			maven { url 'https://jitpack.io' }
-		}
+repositories {
+    maven { url 'https://jitpack.io' }
+}
 ```
 ```
     dependencies {
