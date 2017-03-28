@@ -76,7 +76,8 @@ public class FirebaseDatabaseManager {
         }
 
         /**
-         * Provides data window as observable of child items events, with items type is known and same.
+         * Provides data window as observable of WindowChangeEvent for each individual item,
+         * type of which is known and same, interleaved with DataQuery for next window
          *
          * @param dataQuery determines window into firebase database data
          * @param itemType  type of item for window data
@@ -92,7 +93,8 @@ public class FirebaseDatabaseManager {
 
 
         /**
-         * Provides data window as observable of child items events, with type either unknown or changing
+         * Provides data window as observable of WindowChangeEvent for each individual item,
+         * interleaved with DataQuery for next window
          *
          * @param dataQuery determines window into firebase database data
          * @return observable of child items events. Buffering is used for backpressure
