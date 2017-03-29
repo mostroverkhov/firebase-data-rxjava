@@ -60,7 +60,7 @@ public class DataWindowQueryFuncTest extends AbstractTest {
 
         List<Data> allData = allNextEvents(nexts);
         for (int i = 0; i < allData.size(); i++) {
-            int expectedId = i;
+            String expectedId = String.valueOf(i);
             Data actualData = allData.get(i);
             Assert.assertEquals("Data order should be asc", expectedId, actualData.getId());
         }
@@ -102,9 +102,36 @@ public class DataWindowQueryFuncTest extends AbstractTest {
         List<Data> allData = allNextEvents(nexts);
         for (int i = 0; i < allData.size(); i++) {
             Data actualData = allData.get(i);
-            int expectedId = allData.size() - 1 - i;
+            String expectedId = String.valueOf(allData.size() - 1 - i);
             Assert.assertEquals("Data order should be desc", expectedId, actualData.getId());
         }
+    }
+
+    @Test(timeout = 10_000)
+    public void dataQueryStartWithTest() throws Exception {
+
+        final DataQuery allDataQuery = new DataQuery.Builder(dbRef)
+                .asc()
+                .windowWithSize(WINDOW_SIZE)
+                .build();
+
+        final Recorder allRecorder = performWindowQuery(allDataQuery, Data.class);
+        List<Recorder.Event> allNexts = allRecorder.getNexts();
+        Window<Data> lastWindow = allNexts.get(allNexts.size() - 1).getData();
+        String key = lastWindow.getDataQuery().getWindowStartWith();
+
+        final DataQuery dataQuery = new DataQuery.Builder(dbRef)
+                .asc()
+                .windowWithSize(WINDOW_SIZE)
+                .startWith(key)
+                .build();
+
+        final Recorder recorder = performWindowQuery(dataQuery, Data.class);
+        List<Recorder.Event> nexts = recorder.getNexts();
+        List<Recorder.Event> errors = recorder.getErrors();
+        List<Data> allData = allNextEvents(nexts);
+        Assert.assertEquals(WINDOW_SIZE, allData.size());
+        Assert.assertEquals(0, errors.size());
     }
 
     @Test

@@ -15,8 +15,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.sql.Time;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import rx.Subscriber;
 import rx.schedulers.Schedulers;
@@ -49,6 +51,9 @@ public class UpdateFuncTest extends AbstractTest {
                     .observeOn(Schedulers.io())
                     .toBlocking()
                     .subscribe(new WriteSubscriber(recorder, data));
+            Assert.assertTrue("onError should be consistent", recorder.getErrors().isEmpty());
+            Assert.assertEquals("onComplete should be consistent", 1, recorder.getCompletes().size());
+            Assert.assertEquals("onNext should be consistent", 1, recorder.getNexts().size());
         } finally {
             writeRef.removeValue();
         }
@@ -123,6 +128,7 @@ public class UpdateFuncTest extends AbstractTest {
 
         @Override
         public void onNext(WriteResult writeResult) {
+            CountDownLatch latch = new CountDownLatch(1);
             recorder.recordNext(writeResult);
             writeResult.getDatabaseReference().addListenerForSingleValueEvent(
                     new ValueEventListener() {
@@ -130,13 +136,24 @@ public class UpdateFuncTest extends AbstractTest {
                         public void onDataChange(DataSnapshot dataSnapshot) {
                             Data value = dataSnapshot.getValue(Data.class);
                             Assert.assertEquals("Data written should be consistent", data, value);
+                            latch.countDown();
                         }
 
                         @Override
                         public void onCancelled(DatabaseError databaseError) {
+                            latch.countDown();
                             throw new IllegalStateException("Database error while reading back written data: " + databaseError);
                         }
                     });
+            await(latch);
+        }
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Interrupted", e);
         }
     }
 
@@ -161,6 +178,7 @@ public class UpdateFuncTest extends AbstractTest {
 
         @Override
         public void onNext(WriteResult writeResult) {
+            CountDownLatch latch = new CountDownLatch(1);
             recorder.recordNext(writeResult);
             originalWriteRef.addListenerForSingleValueEvent(new ValueEventListener() {
 
@@ -168,13 +186,16 @@ public class UpdateFuncTest extends AbstractTest {
                 public void onDataChange(DataSnapshot dataSnapshot) {
                     Object value = dataSnapshot.getValue();
                     Assert.assertNull(value);
+                    latch.countDown();
                 }
 
                 @Override
                 public void onCancelled(DatabaseError databaseError) {
+                    latch.countDown();
                     throw new IllegalStateException("Database error while reading deleted data: " + databaseError);
                 }
             });
+            await(latch);
         }
     }
 }

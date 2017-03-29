@@ -24,10 +24,3 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
-
-ext {
-    libRxVersion = '0.1.7'
-    windowSourceVersion = '0.1.1'
-    libGroupId = 'com.github.mostroverkhov'
-    libDeployUrl = project.repositories.mavenLocal().url
-}

@@ -124,6 +124,7 @@ public class DataQuery {
         private OrderDirection orderDir = OrderDirection.ASC;
         private OrderBy orderBy = OrderBy.KEY;
         private String key;
+        private String startWith;
 
         public Builder(DatabaseReference dbRef) {
             this.dbRef = dbRef;
@@ -144,9 +145,7 @@ public class DataQuery {
          * @param key child property name used for ordering
          */
         public Builder orderByChild(String key) {
-            if (key == null) {
-                throw new IllegalArgumentException("key should not be null");
-            }
+            assertNotNull(key);
             this.key = key;
             orderBy = OrderBy.CHILD;
             return this;
@@ -171,11 +170,36 @@ public class DataQuery {
         }
 
         /**
+         * start child key
+         */
+        public Builder startWith(String key) {
+            assertNotNull(key);
+            this.startWith = key;
+            return this;
+        }
+
+        /**
+         * start child key
+         */
+        public Builder clearStartWith() {
+            this.startWith = null;
+            return this;
+        }
+
+
+        /**
          * ascending order for data windows
          */
         public Builder asc() {
             orderDir = OrderDirection.ASC;
             return this;
+        }
+
+
+        private static void assertNotNull(String key) {
+            if (key == null) {
+                throw new IllegalArgumentException("arg should not be null");
+            }
         }
 
         /**
@@ -190,7 +214,7 @@ public class DataQuery {
          * @return new {@link DataQuery}
          */
         public DataQuery build() {
-            return new DataQuery(dbRef, windowSize, orderDir, orderBy, key, null);
+            return new DataQuery(dbRef, windowSize, orderDir, orderBy, key, startWith);
         }
     }
 

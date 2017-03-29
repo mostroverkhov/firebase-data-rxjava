@@ -4,18 +4,23 @@ package com.github.mostroverkhov.firebase_rx_data.common;
  * Created by Maksym Ostroverkhov on 15.02.2017.
  */
 public final class Data {
-    private int id;
+    private String id;
     private String data;
 
-    public Data(int id, String data) {
+    public Data(String id, String data) {
         this.id = id;
+        this.data = data;
+    }
+
+    public Data(int id, String data) {
+        this.id = String.valueOf(id);
         this.data = data;
     }
 
     public Data() {
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -23,7 +28,7 @@ public final class Data {
         this.data = data;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
@@ -38,14 +43,13 @@ public final class Data {
 
         Data data1 = (Data) o;
 
-        if (id != data1.id) return false;
+        if (id != null ? !id.equals(data1.id) : data1.id != null) return false;
         return data != null ? data.equals(data1.data) : data1.data == null;
-
     }
 
     @Override
     public int hashCode() {
-        int result = id;
+        int result = id != null ? id.hashCode() : 0;
         result = 31 * result + (data != null ? data.hashCode() : 0);
         return result;
     }

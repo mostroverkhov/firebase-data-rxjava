@@ -362,7 +362,7 @@ public class DataWindowSource {
         scheduler.execute(new Runnable() {
             @Override
             public void run() {
-                T value = dataSnapshot.getValue(itemType);
+                T value = DataWindowSource.getValue(dataSnapshot, itemType);
                 if (value != null) {
                     notificationCallback.onChildChanged(new WindowChangeEvent<>(
                             value,
@@ -371,8 +371,18 @@ public class DataWindowSource {
                 }
             }
         });
-
     }
+
+    private static <T> T getValue(DataSnapshot dataSnapshot, Class<T> itemType) {
+        T value;
+        try {
+            value = dataSnapshot.getValue(itemType);
+        } catch (DatabaseException e) {
+            value = null;
+        }
+        return value;
+    }
+
 
     private static <T> List<T> toItemsList(List<KeyValue<T>> items) {
         ArrayList<T> res = new ArrayList<>();
@@ -474,7 +484,7 @@ public class DataWindowSource {
 
     private <T> Pair<List<KeyValue<T>>, DataQuery> onDataChangeAsc(DataQuery dataQuery,
                                                                    DataSnapshot dataSnapshot,
-                                                                   Class<T> clazz,
+                                                                   Class<T> itemType,
                                                                    int windowSize) {
         int index = 0;
         String nextWindowStart = null;
@@ -482,13 +492,7 @@ public class DataWindowSource {
         List<KeyValue<T>> res = new ArrayList<>();
 
         for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-
-            T val;
-            try {
-                val = snapshot.getValue(clazz);
-            } catch (DatabaseException e) {
-                val = null;
-            }
+            T val = getValue(snapshot, itemType);
             if (index < windowSize) {
                 if (val != null) {
                     res.add(new KeyValue<>(snapshot.getKey(), val));
@@ -520,6 +524,7 @@ public class DataWindowSource {
             if (firstSnapshot == null) {
                 firstSnapshot = snapshot;
             }
+
             T val = snapshot.getValue(clazz);
             res.add(0, new KeyValue<>(snapshot.getKey(), val));
         }
