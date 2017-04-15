@@ -6,8 +6,8 @@ of convenience read/write operations with reactive interface (RxJava1)
 `FirebaseDataBaseManager` is library entry point
 
 #### Read operations
-Reads are using `DataQuery`. DataQuery determines data window into database
-  `DataQuery` is built using `DataQuery.Builder`
+Reads are using `DataQuery`. DataQuery determines data window into database    
+`DataQuery` is built using `DataQuery.Builder`
 
 ##### Three interaction models are supported:
 
