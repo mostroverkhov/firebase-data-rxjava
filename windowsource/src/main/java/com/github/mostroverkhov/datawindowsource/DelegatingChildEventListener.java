@@ -8,9 +8,13 @@ import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -18,12 +22,13 @@ import java.util.Map;
  */
 class DelegatingChildEventListener<T> implements ChildEventListener {
 
-    private final LinkedHashMap<KeyAndKind, DataSnapshot> cachedEvents = new LinkedHashMap<>();
+    private final ConcurrentMap<KeyAndKind, DataSnapshot> cachedEvents = new ConcurrentHashMap<>();
     private final Scheduler scheduler;
     private final NotificationCallback<T> notificationCallback;
     private final Class<T> itemType;
     private volatile boolean dispatchToCallback = false;
-    private final Object lock = new Object();
+    private final AtomicInteger actionsCounter = new AtomicInteger();
+    private final Queue<Runnable> actions = new ConcurrentLinkedQueue<>();
 
     public DelegatingChildEventListener(Scheduler scheduler,
                                         NotificationCallback<T> notificationCallback,
@@ -53,26 +58,28 @@ class DelegatingChildEventListener<T> implements ChildEventListener {
         processChildEvent(dataSnapshot, itemType, WindowChangeEvent.Kind.MOVED);
     }
 
-    private void processChildEvent(DataSnapshot dataSnapshot,
-                                   Class<T> type,
-                                   WindowChangeEvent.Kind kind) {
-
-        T value = dataSnapshot.getValue(type);
-
-        if (value != null) {
-            WindowChangeEvent<T> event = new WindowChangeEvent<>(
-                    value,
-                    kind);
-
-            synchronized (lock) {
-                if (dispatchToCallback) {
-                    dispatchDataNotificationEvent(event);
-                } else {
-                    cachedEvents.put(new KeyAndKind(dataSnapshot.getKey(), kind),
-                            dataSnapshot);
+    private void processChildEvent(final DataSnapshot dataSnapshot,
+                                   final Class<T> type,
+                                   final WindowChangeEvent.Kind kind) {
+        actions.offer(new Runnable() {
+            @Override
+            public void run() {
+                T value = dataSnapshot.getValue(type);
+                if (value != null) {
+                    WindowChangeEvent<T> event = new WindowChangeEvent<>(
+                            value,
+                            kind);
+                    if (dispatchToCallback) {
+                        dispatchDataNotificationEvent(event);
+                    } else {
+                        cachedEvents.put(
+                                new KeyAndKind(dataSnapshot.getKey(), kind),
+                                dataSnapshot);
+                    }
                 }
             }
-        }
+        });
+        drain();
     }
 
     @Override
@@ -81,30 +88,38 @@ class DelegatingChildEventListener<T> implements ChildEventListener {
     }
 
 
-    public void removeEvents(List<KeyValue<T>> keyValues) {
-        synchronized (lock) {
-            for (KeyValue<T> keyValue : keyValues) {
-                cachedEvents.remove(new KeyAndKind(
-                        keyValue.getKey(),
-                        WindowChangeEvent.Kind.ADDED));
+    public void removeEvents(final List<KeyValue<T>> keyValues) {
+        actions.offer(new Runnable() {
+            @Override
+            public void run() {
+                for (KeyValue<T> keyValue : keyValues) {
+                    cachedEvents.remove(new KeyAndKind(
+                            keyValue.getKey(),
+                            WindowChangeEvent.Kind.ADDED));
+                }
             }
-        }
+        });
+        drain();
     }
 
     public void dispatchChildEvents() {
-        synchronized (lock) {
-            for (Map.Entry<KeyAndKind, DataSnapshot> event : cachedEvents.entrySet()) {
-                T value = event.getValue().getValue(itemType);
+        actions.offer(new Runnable() {
+            @Override
+            public void run() {
+                for (Map.Entry<KeyAndKind, DataSnapshot> event : cachedEvents.entrySet()) {
+                    T value = event.getValue().getValue(itemType);
 
-                if (value != null) {
-                    dispatchDataNotificationEvent(new WindowChangeEvent<>(
-                            value,
-                            event.getKey().getKind()));
+                    if (value != null) {
+                        dispatchDataNotificationEvent(new WindowChangeEvent<>(
+                                value,
+                                event.getKey().getKind()));
+                    }
                 }
+                cachedEvents.clear();
+                dispatchToCallback = true;
             }
-            cachedEvents.clear();
-        }
-        dispatchToCallback = true;
+        });
+        drain();
     }
 
     private void dispatchDataNotificationEvent(final WindowChangeEvent<T> event) {
@@ -123,5 +138,14 @@ class DelegatingChildEventListener<T> implements ChildEventListener {
                 notificationCallback.onError(databaseError);
             }
         });
+    }
+
+    private void drain() {
+        if (actionsCounter.getAndIncrement() == 0) {
+            do {
+                Runnable action = actions.poll();
+                action.run();
+            } while (actionsCounter.decrementAndGet() != 0);
+        }
     }
 }
