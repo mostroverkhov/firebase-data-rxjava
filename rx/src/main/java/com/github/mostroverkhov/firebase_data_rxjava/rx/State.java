@@ -5,9 +5,10 @@ import com.github.mostroverkhov.datawindowsource.callbacks.QueryHandle;
 import com.github.mostroverkhov.datawindowsource.model.DataQuery;
 import com.github.mostroverkhov.firebase_data_rxjava.rx.DataOnSubscribe.DataWindowOnSubscribe;
 
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -15,9 +16,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by Maksym Ostroverkhov on 20.07.2016.
  */
 class State<T> {
+    private final AtomicInteger actionsCounter = new AtomicInteger();
+    private final Queue<Runnable> actions = new ConcurrentLinkedQueue<>();
+
     private volatile DataQuery dataQuery;
-    private final Set<QueryHandle> queryHandles = new HashSet<>();
-    private final Object lock = new Object();
+    private final Set<QueryHandle> queryHandles = Collections.newSetFromMap(
+            new ConcurrentHashMap<QueryHandle, Boolean>());
     private final Queue<DataWindowOnSubscribe<T>> subscribeFuncs =
             new ConcurrentLinkedQueue<>();
     private final AtomicInteger observablesCount = new AtomicInteger();
@@ -34,15 +38,6 @@ class State<T> {
         this.dataQuery = dataQuery;
     }
 
-    public void cancelDataHandles() {
-        synchronized (lock) {
-            for (QueryHandle queryHandle : queryHandles) {
-                queryHandle.cancel();
-            }
-            queryHandles.clear();
-        }
-    }
-
     public Queue<DataWindowOnSubscribe<T>> getSubscribeFuncs() {
         return subscribeFuncs;
     }
@@ -51,17 +46,66 @@ class State<T> {
         return observablesCount;
     }
 
-    public void addQueryHandle(QueryHandle queryHandle) {
-        synchronized (lock) {
+    public void cancelDataHandles() {
+        actions.offer(new ClearQueries());
+        drain();
+    }
+
+    public void addQueryHandle(final QueryHandle queryHandle) {
+        actions.offer(new AddQuery(queryHandle));
+        drain();
+    }
+
+    public void removeQueryHandle(final QueryHandle queryHandle) {
+        actions.offer(new RemoveQuery(queryHandle));
+        drain();
+    }
+
+    private void drain() {
+        if (actionsCounter.getAndIncrement() == 0) {
+            do {
+                Runnable action = actions.poll();
+                action.run();
+            } while (actionsCounter.decrementAndGet() != 0);
+        }
+    }
+
+    private class RemoveQuery implements Runnable {
+
+        private final QueryHandle queryHandle;
+
+        public RemoveQuery(QueryHandle queryHandle) {
+            this.queryHandle = queryHandle;
+        }
+
+        @Override
+        public void run() {
+            if (queryHandle != null) {
+                queryHandles.remove(queryHandle);
+            }
+        }
+    }
+
+    private class AddQuery implements Runnable {
+        private final QueryHandle queryHandle;
+
+        public AddQuery(QueryHandle queryHandle) {
+            this.queryHandle = queryHandle;
+        }
+
+        @Override
+        public void run() {
             queryHandles.add(queryHandle);
         }
     }
 
-    public void removeQueryHandle(QueryHandle queryHandle) {
-        synchronized (lock) {
-            if (queryHandle != null) {
-                queryHandles.remove(queryHandle);
+    private class ClearQueries implements Runnable {
+        @Override
+        public void run() {
+            for (QueryHandle queryHandle : queryHandles) {
+                queryHandle.cancel();
             }
+            queryHandles.clear();
         }
     }
 }
