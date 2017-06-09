@@ -4,7 +4,8 @@ package com.github.mostroverkhov.firebase_data_rxjava.rx;
 import com.github.mostroverkhov.datawindowsource.NotificationsHandle;
 import com.github.mostroverkhov.datawindowsource.callbacks.QueryHandle;
 
-import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Created by Maksym Ostroverkhov on 17.07.2016.
@@ -16,28 +17,21 @@ import java.util.WeakHashMap;
  */
 class DataNotificationsWatcher {
 
-    private final WeakHashMap<Object, HandleAction> readResults = new WeakHashMap<>();
-    private final Object lock = new Object();
+    private final ConcurrentMap<Object, HandleAction> readResults = new ConcurrentHashMap<>();
 
     public void releaseNotifications(Object item) {
-        synchronized (lock) {
-            HandleAction action = readResults.remove(item);
-            if (action != null) {
-                action.perform();
-            }
+        HandleAction action = readResults.remove(item);
+        if (action != null) {
+            action.perform();
         }
     }
 
     public void addReadResult(Object item, NotificationsHandle handle) {
-        synchronized (lock) {
-            readResults.put(item, new NotificationsHandleAction(handle));
-        }
+        readResults.put(item, new NotificationsHandleAction(handle));
     }
 
     public void addReadResult(Object item, QueryHandle handle) {
-        synchronized (lock) {
-            readResults.put(item, new QueryHandleAction(handle));
-        }
+        readResults.put(item, new QueryHandleAction(handle));
     }
 
     private interface HandleAction {
