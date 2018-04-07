@@ -6,11 +6,11 @@ sourceCompatibility = JavaVersion.VERSION_1_7
 targetCompatibility = JavaVersion.VERSION_1_7
 
 dependencies {
-    compile group: 'com.google.firebase', name: 'firebase-server-sdk', version: '3.0.1'
+    compile group: 'com.google.firebase', name: 'firebase-admin', version: '5.9.0'
 }
 
 configurations.errorprone {
-    resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.0.17'
+    resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.2.0'
 }
 
 task sourcesJar(type: Jar, dependsOn:classes) {

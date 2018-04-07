@@ -86,7 +86,7 @@ public class FirebaseDatabaseManager {
         public <T> Observable<DataItem> notifications(DataQuery dataQuery,
                                                       Class<T> itemType) {
             return Observable
-                    .create(new NotificationsOnSubscribe<T>(dataQuery, itemType, dataWindowSource))
+                    .unsafeCreate(new NotificationsOnSubscribe<T>(dataQuery, itemType, dataWindowSource))
                     .serialize()
                     .onBackpressureBuffer();
         }
@@ -158,7 +158,7 @@ public class FirebaseDatabaseManager {
          * @return write completion notification observable
          */
         public Observable<WriteResult> updateChildren(final Map<String, Object> childUpdates) {
-            return Observable.create(new OnSubscribe<WriteResult>() {
+            return Observable.unsafeCreate(new OnSubscribe<WriteResult>() {
                 @Override
                 public void call(final Subscriber<? super WriteResult> subscriber) {
                     dbRef.updateChildren(childUpdates, completionListener(subscriber));
@@ -172,7 +172,7 @@ public class FirebaseDatabaseManager {
          * @return write completion notification observable
          */
         public Observable<WriteResult> setValue(final Object object) {
-            return Observable.create(new OnSubscribe<WriteResult>() {
+            return Observable.unsafeCreate(new OnSubscribe<WriteResult>() {
                 @Override
                 public void call(final Subscriber<? super WriteResult> subscriber) {
                     dbRef.setValue(object, completionListener(subscriber));
@@ -186,7 +186,7 @@ public class FirebaseDatabaseManager {
          * @return write completion notification observable
          */
         public Observable<WriteResult> removeValue() {
-            return Observable.create(new OnSubscribe<WriteResult>() {
+            return Observable.unsafeCreate(new OnSubscribe<WriteResult>() {
                 @Override
                 public void call(Subscriber<? super WriteResult> subscriber) {
                     dbRef.removeValue(completionListener(subscriber));

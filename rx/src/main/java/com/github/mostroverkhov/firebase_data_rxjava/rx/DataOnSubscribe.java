@@ -51,7 +51,7 @@ class DataOnSubscribe<T> extends AsyncOnSubscribe<State<T>, Window<T>> {
         if (state.observablesCount().getAndIncrement() == 0) {
             queryNextWindow(state);
         }
-        observer.onNext(Observable.create(dataWindowOnSubscribe));
+        observer.onNext(Observable.unsafeCreate(dataWindowOnSubscribe));
 
         return state;
     }

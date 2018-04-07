@@ -52,7 +52,7 @@ class DataAndNotificationsOnSubscribe<T> extends AsyncOnSubscribe<State, WindowW
                          final Observer<Observable<? extends WindowWithNotifications<T>>> observer) {
 
         final Observable<WindowWithNotifications<T>> readResultObservable = Observable
-                .create(new WindowWithNotificationsOnSubscribe<>(dataWindowSource,
+                .unsafeCreate(new WindowWithNotificationsOnSubscribe<>(dataWindowSource,
                         state,
                         requested,
                         dataItemType,
